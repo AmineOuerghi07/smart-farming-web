@@ -29,7 +29,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
     { icon: <Store color='#05df72' />, label: 'Store', route: "/store" },
     { icon: <Cloud color='#05df72' />, label: 'Weather', route: "/weather" },
     { icon: <CircleUser color='#05df72' />, label: 'Profile', route: "/profile" },
-    { icon: <Settings color='#05df72' />, label: 'Settings', route: "/settings" }
+    { icon: <Settings color='#05df72' />, label: 'Settings', route: "/settings" },
 
   ];
 

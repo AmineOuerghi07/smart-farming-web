@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Star, ChevronDown, Search } from 'lucide-react';
 import { Range, getTrackBackground } from 'react-range';
+import { Product } from '../classes/Product';
+import { useNavigate } from 'react-router';
+
 
 export default function Store() {
-    interface Product {
-        id: number;
-        name: string;
-        description: string;
-        price: number;
-        category: string;
-        rating: number;
-        image: string;
-    }
+    const navigate = useNavigate();
+
 
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -79,9 +75,7 @@ export default function Store() {
             case 'priceHigh':
                 result.sort((a, b) => b.price - a.price);
                 break;
-            case 'rating':
-                result.sort((a, b) => b.rating - a.rating);
-                break;
+
             default:
                 break;
         }
@@ -122,26 +116,27 @@ export default function Store() {
 
             <main className="container mx-auto p-4 flex-grow text-gray-900">
                 <div className="flex flex-col md:flex-row gap-6">
-                    <div className="w-full md:min-w-[260px] md:max-w-[260px] bg-white p-4 rounded-lg shadow-md flex-shrink-0">
+                    <div className="w-full md:min-w-[260px] md:max-w-[260px] max-h-[600px] overflow-auto bg-gray-800 p-4 rounded-lg shadow-md flex-shrink-0">
 
-                        <h2 className="text-lg font-semibold mb-4">Filters</h2>
+
+                        <h2 className="text-lg text-white font-semibold mb-4">Filters</h2>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">Search</label>
-                            <div className="relative">
+                            <label className="block text-sm text-white font-medium mb-2">Search</label>
+                            <div className="relative ">
                                 <input
                                     type="text"
                                     placeholder="Search products..."
-                                    className="w-full p-2 border rounded-md pl-8 text-black"
+                                    className="w-full p-2 border rounded-md pl-8 text-white"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-white" />
                             </div>
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">
+                            <label className="block text-sm text-white font-medium mb-2">
                                 Price Range: ${priceRange[0]} - ${priceRange[1]}
                             </label>
                             <Range
@@ -188,33 +183,33 @@ export default function Store() {
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">Categories</label>
+                            <label className="block text-sm text-white font-medium mb-2">Categories</label>
                             {categories.map(category => (
-                                <div key={category} className="flex items-center mb-2">
+                                <div key={category} className="flex items-center text-white mb-2">
                                     <input
                                         type="checkbox"
                                         id={category}
                                         checked={selectedCategories.includes(category)}
                                         onChange={() => handleCategoryChange(category)}
-                                        className="mr-2"
+                                        className="mr-2 "
                                     />
                                     <label htmlFor={category}>{category}</label>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">Sort By</label>
+                        <div className="mb-6 ">
+                            <label className="block text-sm text-white font-medium mb-2">Sort By</label>
                             <div className="relative">
                                 <select
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value)}
-                                    className="w-full p-2 border rounded-md appearance-none pr-8"
+                                    className="w-full p-2 border bg-gray-700 text-white rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-green-500"
                                 >
-                                    <option value="default">Default</option>
-                                    <option value="priceLow">Price: Low to High</option>
-                                    <option value="priceHigh">Price: High to Low</option>
-                                    <option value="rating">Top Rated</option>
+                                    <option value="default" className="bg-gray-700 text-white">Default</option>
+                                    <option value="priceLow" className="bg-gray-700 text-white">Price: Low to High</option>
+                                    <option value="priceHigh" className="bg-gray-700 text-white">Price: High to Low</option>
+                                    <option value="rating" className="bg-gray-700 text-white">Top Rated</option>
                                 </select>
                                 <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400" />
                             </div>
@@ -224,28 +219,32 @@ export default function Store() {
                     <div className="flex-grow">
                         {filteredProducts.length === 0 ? (
                             <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                                <p className="text-xl text-gray-500">No products found matching your criteria.</p>
+                                <p className="text-xl text-white">No products found matching your criteria.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                            <div className="grid grid-cols-1  sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredProducts.map((product) => (
-                                    <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+
+                                    <div key={product.id}
+                                        onClick={() => navigate(`/product_details/${product._id}`)}
+                                        className=" bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                                         <img
                                             src={`http://localhost:3000/uploads/${product.image}`}
                                             alt={product.name}
-                                            className="w-full h-48 object-cover"
+                                            className="w-full h-48  object-cover"
                                         />
                                         <div className="p-4">
                                             <div className="flex justify-between items-start mb-2">
-                                                <h3 className="font-semibold text-lg">{product.name}</h3>
-                                                <span className="font-bold text-indigo-700">${product.price.toFixed(2)}</span>
+                                                <h3 className="font-semibold text-lg text-white">{product.name}</h3>
+                                                <span className="font-bold text-green-600">${product.price.toFixed(2)}</span>
                                             </div>
-                                            <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description}</p>
+                                            <p className="text-white text-sm mb-2 line-clamp-2">{product.description}</p>
                                             <div className="flex items-center">
                                                 <div className="flex mr-1">
-                                                    {renderStars(product.rating)}
+                                                    {renderStars(5)}
                                                 </div>
-                                                <span className="text-sm text-gray-500">({product.rating})</span>
+                                                <span className="text-sm text-white">({5})</span>
                                             </div>
                                             <div className="mt-3">
                                                 <button className="bg-green-600 text-white py-1 px-3 rounded-md text-sm hover:bg-green-400 transition-colors">
@@ -253,9 +252,12 @@ export default function Store() {
                                                 </button>
                                             </div>
                                         </div>
+
                                     </div>
+
                                 ))}
                             </div>
+
                         )}
                     </div>
                 </div>
