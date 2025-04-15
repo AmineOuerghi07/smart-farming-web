@@ -8,6 +8,9 @@ import Dashboard from './pages/Dashboard.tsx'
 import Settings from './pages/Settings.tsx'
 import Weather from './pages/Weather.tsx'
 import Land from './pages/Land.tsx'
+import Store from './pages/Store.tsx'
+import ProductDetailPage from './pages/ProductDetailPage.tsx'
+import ShoppingCart from './pages/ShoppingCart.tsx'
 
 
 createRoot(document.getElementById('root')!).render(
@@ -20,6 +23,9 @@ createRoot(document.getElementById('root')!).render(
         <Route path='land' element={<Land />} />
         <Route path='settings' element={<Settings />} />
         <Route path='weather' element={<Weather />} />
+        <Route path='store' element={<Store />} />
+        <Route path='product_details/:id' element={<ProductDetailPage />} />
+        <Route path='ShoppingCart' element={<ShoppingCart />} />
       </Route>
     </Routes>
     </BrowserRouter>
