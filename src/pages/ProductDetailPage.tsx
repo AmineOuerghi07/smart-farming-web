@@ -155,7 +155,23 @@ export default function ProductDetailPage() {
                                     </div>
 
                                     <div className="flex space-x-2">
-                                        <button className="flex-1 bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-md flex items-center justify-center">
+                                        <button 
+                                        className="flex-1 bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-md flex items-center justify-center"
+                                        onClick={() => {
+                                            const cart = JSON.parse(localStorage.getItem("shoppingCart") || "[]");
+                                            const existingProductIndex = cart.findIndex((item: { id: string }) => item.id === product._id);
+                                            
+                                            if (existingProductIndex !== -1) {
+                                                // If product exists, update the quantity
+                                                cart[existingProductIndex].quantity += quantity;
+                                            } else {
+                                                // If product doesn't exist, add it to the cart
+                                                cart.push({ id: product._id, quantity });
+                                            }
+                                            
+                                            localStorage.setItem("shoppingCart", JSON.stringify(cart));
+                                        }}
+                                        >
                                             <ShoppingCart size={18} className="mr-2" />
                                             Add to Cart
                                         </button>
