@@ -1,33 +1,39 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-import { BrowserRouter, Routes, Route } from 'react-router'
-import Profile from './pages/Profile.tsx'
-import Dashboard from './pages/Dashboard.tsx'
-import Settings from './pages/Settings.tsx'
-import Weather from './pages/Weather.tsx'
-import Land from './pages/Land.tsx'
-import Store from './pages/Store.tsx'
-import ProductDetailPage from './pages/ProductDetailPage.tsx'
-import ShoppingCart from './pages/ShoppingCart.tsx'
-
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import { Provider } from 'react-redux';
+import { store, persistor } from './state/store';
+import App from './App';
+import { BrowserRouter, Routes, Route } from 'react-router';
+import { PersistGate } from 'redux-persist/integration/react';
+import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
+import Weather from './pages/Weather';
+import Land from './pages/Land';
+import Store from './pages/Store';
+import ProductDetailPage from './pages/ProductDetailPage';
+import ShoppingCart from './pages/ShoppingCart';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-    <Routes>
-      <Route path='/' element={<App />}>
-      <Route index element={<Dashboard />} />
-        <Route path='profile' element={<Profile />} />
-        <Route path='land' element={<Land />} />
-        <Route path='settings' element={<Settings />} />
-        <Route path='weather' element={<Weather />} />
-        <Route path='store' element={<Store />} />
-        <Route path='product_details/:id' element={<ProductDetailPage />} />
-        <Route path='ShoppingCart' element={<ShoppingCart />} />
-      </Route>
-    </Routes>
-    </BrowserRouter>
-  </StrictMode>,
-)
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<App />}>
+              <Route index element={<Dashboard />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="land" element={<Land />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="weather" element={<Weather />} />
+              <Route path="store" element={<Store />} />
+              <Route path="product_details/:id" element={<ProductDetailPage />} />
+              <Route path="ShoppingCart" element={<ShoppingCart />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </PersistGate>
+    </Provider>
+  </StrictMode>
+);

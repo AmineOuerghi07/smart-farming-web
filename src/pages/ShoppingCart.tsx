@@ -2,10 +2,13 @@ import React, { useEffect, useState } from "react";
 import { ArrowLeft, CreditCard } from "lucide-react";
 import extractShoppingCart from "../methodes/shoppingCartMethodes";
 import { Product } from "../classes/Product";
-
+import { useDispatch } from "react-redux";
+import { reset } from "../state/totalPriceSlice/totalPriceSlice";
+import { resetCount } from "../state/counter/counterSlice";
 const ShoppingCart: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
+  const dispatch = useDispatch();
   // Load cart products on component mount
   useEffect(() => {
     const loadCart = async () => {
@@ -124,13 +127,13 @@ const ShoppingCart: React.FC = () => {
                     <button
                       className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 transition-colors flex-grow"
                       onClick={() => {
-                        const cart = products.map((product) => ({
-                          id: product._id.toString(),
-                          quantity: product.quantity,
-                        }));
+                        dispatch(reset());
+                        dispatch(resetCount());
+
+                        
                         localStorage.setItem(
                           "shoppingCart",
-                          JSON.stringify(cart)
+                          JSON.stringify([])
                         );
                       }}
                     >

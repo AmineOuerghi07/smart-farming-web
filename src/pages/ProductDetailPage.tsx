@@ -2,8 +2,14 @@ import { useEffect, useState } from 'react';
 import { Star, ShoppingCart, Plus, Minus, ArrowLeft } from 'lucide-react';
 import { Product } from '../classes/Product';
 import { useParams } from 'react-router';
+import { useDispatch } from 'react-redux';
+import { increment } from '../state/counter/counterSlice';
+import { incrementByAmount } from '../state/totalPriceSlice/totalPriceSlice';
+import { useNavigate } from 'react-router';
+
 
 export default function ProductDetailPage() {
+    const navigate = useNavigate();
     const { id } = useParams();
     const [product, setProduct] = useState<any | null>(null);
     const [quantity, setQuantity] = useState(1);
@@ -47,6 +53,9 @@ export default function ProductDetailPage() {
             care: "Water thoroughly but infrequently, allowing soil to dry between waterings. Plant in well-draining soil in a location with at least 6 hours of sunlight. Protect from strong winds and frost in cooler climates."
         };
     }
+
+    const dispatch = useDispatch();
+
 
     const incrementQuantity = () => {
         if (product && quantity < product.stock) {
@@ -155,22 +164,28 @@ export default function ProductDetailPage() {
                                     </div>
 
                                     <div className="flex space-x-2">
-                                        <button 
-                                        className="flex-1 bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-md flex items-center justify-center"
-                                        onClick={() => {
-                                            const cart = JSON.parse(localStorage.getItem("shoppingCart") || "[]");
-                                            const existingProductIndex = cart.findIndex((item: { id: string }) => item.id === product._id);
-                                            
-                                            if (existingProductIndex !== -1) {
-                                                // If product exists, update the quantity
-                                                cart[existingProductIndex].quantity += quantity;
-                                            } else {
-                                                // If product doesn't exist, add it to the cart
-                                                cart.push({ id: product._id, quantity });
-                                            }
-                                            
-                                            localStorage.setItem("shoppingCart", JSON.stringify(cart));
-                                        }}
+                                        <button
+                                            className="flex-1 bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-md flex items-center justify-center"
+                                            onClick={() => {
+                                                const cart = JSON.parse(localStorage.getItem("shoppingCart") || "[]");
+                                                const existingProductIndex = cart.findIndex((item: { id: string }) => item.id === product._id);
+
+                                                if (existingProductIndex !== -1) {
+                                                    // If product exists, update the quantity
+                                                    cart[existingProductIndex].quantity += quantity;
+                                                } else {
+                                                    // If product doesn't exist, add it to the cart
+                                                    cart.push({ id: product._id, quantity });
+                                                }
+
+                                                localStorage.setItem("shoppingCart", JSON.stringify(cart));
+
+                                                for (let i = 0; i < quantity; i++) {
+                                                    dispatch(increment());
+                                                } // Increment the counter in the Redux store
+                                                dispatch(incrementByAmount(product.price * quantity)); // Update the total price in the Redux store
+
+                                            }}
                                         >
                                             <ShoppingCart size={18} className="mr-2" />
                                             Add to Cart
@@ -218,7 +233,7 @@ export default function ProductDetailPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 {relatedProducts.length > 0 ? (
                                     relatedProducts.map((relatedProduct) => (
-                                        <div
+                                        <div onClick={ () => navigate(`/product_details/${relatedProduct._id}`)}
                                             key={relatedProduct._id}
                                             className="border text-gray-200 rounded-lg overflow-hidden bg-gray-00 hover:shadow-md transition-shadow"
                                         >

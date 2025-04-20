@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { Menu, ShoppingCart } from 'lucide-react';
 import Drawer from './components/Drawer';
 import { Outlet } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from './state/store';
 
 const App = () => {
+  const ShoppingItemscount = useSelector ((state : RootState) => state.counter.value);
+  const totalPrice = useSelector ((state : RootState) => state.totalPrice.value);
+  const dispatch = useDispatch();
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   return (
 
@@ -23,9 +28,9 @@ const App = () => {
           <div className="flex items-center space-x-4 hover:bg-green-800 p-2 rounded-lg transition-colors">
             <button className="p-2 relative">
               <ShoppingCart size={26} />
-              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">0</span>
+              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">{ShoppingItemscount}</span>
             </button>
-            0.000 DT
+            {totalPrice.toFixed(3)}DT
           </div>
         </a>
       </nav>
