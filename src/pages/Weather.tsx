@@ -1,81 +1,665 @@
-import { useState } from "react";
-import { Cloud, Sun, CloudRain, MapPin, Thermometer, Wind, Droplets, Calendar, Sunrise, Sunset, BarChart, CloudLightning, Snowflake, CloudFog } from "lucide-react";
-import DashboardCard from "../components/DashboardCard";
-import MetricRow from "../components/MetricRow";
+import { useEffect, useState } from "react";
+import { MapPin, Sun, Cloud, CloudRain, Wind, Droplets, CloudLightning, CloudDrizzle, Moon } from "lucide-react";
+import { WeatherService } from "../services/weatherService";
+
+interface WeatherData {
+  city: string;
+  temperature: string;
+  condition: string;
+  humidity: string;
+  windSpeed: string;
+  visibility: string;
+  uvIndex: string;
+  sunrise: string;
+  sunset: string;
+  feelsLike: string;
+  uvDescription: string;
+}
+
+interface Forecast {
+  day: string;
+  temperature: string;
+  condition: string;
+}
 
 export default function Weather() {
-    const [weather] = useState({
-        location: "Tunis, Tunisia",
-        temperature: "28°C",
-        condition: "Sunny",
-        humidity: "45%",
-        windSpeed: "10 km/h",
-        sunrise: "06:30 AM",
-        sunset: "07:45 PM",
-        airQuality: "Moderate",
-        visibility: "10 km",
-        pressure: "1015 hPa",
-        uvIndex: "5 (Moderate)",
-        icon: Sun,
-      });
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<Forecast[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [city, setCity] = useState<string>("");
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [themeMode, setThemeMode] = useState("dark");
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const cityData = await WeatherService.getCityFromCoords(latitude, longitude);
+            setCity(cityData);
+          } catch (err) {
+            console.error("Erreur lors de la récupération de la ville:", err);
+            setError("Impossible de récupérer votre localisation. Veuillez réessayer.");
+          } finally {
+            setLocationLoading(false);
+          }
+        },
+        (error) => {
+          console.error("Erreur de géolocalisation:", error);
+          setError("L'accès à votre localisation est nécessaire pour afficher la météo.");
+          setLocationLoading(false);
+        }
+      );
+    } else {
+      setError("La géolocalisation n'est pas supportée par votre navigateur.");
+      setLocationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!city) {
+        console.log('🏙️ Pas de ville définie, attente...');
+        return;
+      }
+      
+      try {
+        console.log('🔄 Début de la récupération des données météo pour:', city);
+        setLoading(true);
+        setError(null);
+        
+        console.log('📤 Envoi des requêtes API...');
+        
+        const weatherData = await WeatherService.getWeather(city);
+        console.log('📥 Données météo reçues:', weatherData);
+        setWeather(weatherData);
+
+        try {
+          const forecastData = await WeatherService.getForecast(city);
+          setForecast(forecastData);
+        } catch (forecastErr) {
+          setForecast([]);
+        }
+
+        console.log('✅ Données mises à jour avec succès');
+      } catch (err) {
+        console.error('❌ Erreur détaillée:', err);
+        console.error('📝 Stack trace:', err instanceof Error ? err.stack : 'No stack trace');
+        if (err instanceof Error) {
+          setError(`Erreur lors de la récupération des données météo: ${err.message}`);
+        } else {
+          setError("Erreur lors de la récupération des données météo");
+        }
+      } finally {
+        setLoading(false);
+        console.log('🏁 Fin de la récupération des données');
+      }
+    };
+
+    fetchData();
+  }, [city]);
+
+  const getWeatherIcon = (condition: string | undefined) => {
+    if (!condition) {
+      return <Cloud className="w-16 h-16 text-gray-400 animate-float" />;
+    }
+
+    const conditionLower = condition.toLowerCase();
+    const hour = new Date().getHours();
+    const isNight = hour < 6 || hour > 18;
     
-      const upcomingWeather = [
-        { day: "Monday", temperature: "30°C", condition: "Sunny", icon: Sun },
-        { day: "Tuesday", temperature: "27°C", condition: "Cloudy", icon: Cloud },
-        { day: "Wednesday", temperature: "25°C", condition: "Rainy", icon: CloudRain },
-        { day: "Thursday", temperature: "26°C", condition: "Partly Cloudy", icon: Cloud },
-        { day: "Friday", temperature: "29°C", condition: "Sunny", icon: Sun },
-        { day: "Saturday", temperature: "28°C", condition: "Stormy", icon: CloudLightning },
-        { day: "Sunday", temperature: "26°C", condition: "Snowy", icon: Snowflake },
-        { day: "Monday", temperature: "31°C", condition: "Foggy", icon: CloudFog },
-        { day: "Tuesday", temperature: "30°C", condition: "Cloudy", icon: Cloud },
-      ];
-    
-      return (
-        <div className="w-full min-h-screen bg-gray-900 p-8 flex justify-center">
-          <div className="w-full max-w-6xl">
-            {/* Header Section */}
-            <div className="mb-8 flex items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-white">Weather</h1>
-                <p className="text-green-500 flex items-center gap-2">
-                  <MapPin /> {weather.location}
-                </p>
+    switch (conditionLower) {
+      case 'clear':
+        if (isNight) {
+          return (
+            <div className="relative">
+              <Moon className="w-16 h-16 text-gray-300 animate-pulse-slow" />
+              <div className="absolute top-1 left-6">
+                <div className="w-2 h-2 rounded-full bg-blue-200 animate-twinkle" style={{ animationDelay: "0.3s" }} />
+              </div>
+              <div className="absolute top-4 left-12">
+                <div className="w-1 h-1 rounded-full bg-blue-200 animate-twinkle" style={{ animationDelay: "0.7s" }} />
+              </div>
+              <div className="absolute top-8 left-4">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-200 animate-twinkle" style={{ animationDelay: "1.1s" }} />
               </div>
             </div>
-    
-            {/* Weather Overview */}
-            <DashboardCard title="Current Weather" icon={weather.icon}>
-              <div className="flex flex-col items-center justify-center text-white text-5xl font-bold mb-4">
-                {weather.temperature}
-                <p className="text-lg text-green-400">{weather.condition}</p>
+          );
+        }
+        return (
+          <div className="relative">
+            <Sun className="w-16 h-16 text-yellow-400 animate-sun" />
+            <div className="absolute top-0 left-0 w-full h-full">
+              <div className="w-16 h-16 rounded-full bg-yellow-400/20 animate-pulse-slow" />
+            </div>
+          </div>
+        );
+      
+      case 'clouds':
+      case 'scattered clouds':
+      case 'broken clouds':
+      case 'few clouds':
+      case 'cloudy':
+        return (
+          <div className="relative">
+            <div className="absolute top-0 left-0 animate-float" style={{ animationDelay: "0.5s" }}>
+              <Cloud className="w-8 h-8 text-gray-400" />
+            </div>
+            <div className="absolute top-8 left-2 animate-float-delayed">
+              <Cloud className="w-10 h-10 text-gray-500" />
+            </div>
+            <div className="absolute top-4 left-10 animate-float" style={{ animationDelay: "1s" }}>
+              <Cloud className="w-12 h-12 text-gray-300" />
+            </div>
+          </div>
+        );
+      
+      case 'rain':
+      case 'light rain':
+      case 'moderate rain':
+      case 'heavy intensity rain':
+        return (
+          <div className="relative w-16 h-16">
+            <Cloud className="w-16 h-16 text-gray-400 animate-float" />
+            <div className="absolute top-10 left-4">
+              <div className="w-1 h-4 rounded-full bg-blue-400 animate-rain-drop" />
+            </div>
+            <div className="absolute top-10 left-8">
+              <div className="w-1 h-4 rounded-full bg-blue-400 animate-rain-drop-delayed" />
+            </div>
+            <div className="absolute top-10 left-12">
+              <div className="w-1 h-4 rounded-full bg-blue-400 animate-rain-drop-delayed-2" />
+            </div>
+          </div>
+        );
+      
+      case 'thunderstorm':
+      case 'thunderstorm with light rain':
+      case 'thunderstorm with rain':
+        return (
+          <div className="relative w-16 h-16">
+            <Cloud className="w-16 h-16 text-gray-700 animate-float" />
+            <div className="absolute top-6 left-8">
+              <div className="w-6 h-8 text-purple-400 animate-flash">
+                <CloudLightning className="w-6 h-8 text-purple-400" />
               </div>
-              <MetricRow icon={Wind} label="Wind Speed" value={weather.windSpeed} />
-              <MetricRow icon={Droplets} label="Humidity" value={weather.humidity} />
-              <MetricRow icon={Sunrise} label="Sunrise" value={weather.sunrise} />
-              <MetricRow icon={Sunset} label="Sunset" value={weather.sunset} />
-              <MetricRow icon={BarChart} label="Air Quality" value={weather.airQuality} />
-              <MetricRow icon={Thermometer} label="Visibility" value={weather.visibility} />
-              <MetricRow icon={Thermometer} label="Pressure" value={weather.pressure} />
-              <MetricRow icon={Sun} label="UV Index" value={weather.uvIndex} />
-            </DashboardCard>
+            </div>
+            <div className="absolute top-10 left-6">
+              <div className="w-1 h-4 rounded-full bg-blue-400 animate-rain-drop" />
+            </div>
+            <div className="absolute top-10 left-10">
+              <div className="w-1 h-4 rounded-full bg-blue-400 animate-rain-drop-delayed" />
+            </div>
+          </div>
+        );
+      
+      case 'drizzle':
+      case 'light intensity drizzle':
+      case 'mist':
+        return (
+          <div className="relative w-16 h-16">
+            <Cloud className="w-16 h-16 text-gray-400 animate-float" />
+            <div className="absolute top-10 left-5">
+              <div className="w-0.5 h-2 rounded-full bg-blue-300 animate-drizzle" />
+            </div>
+            <div className="absolute top-10 left-8">
+              <div className="w-0.5 h-2 rounded-full bg-blue-300 animate-drizzle-delayed" />
+            </div>
+            <div className="absolute top-10 left-11">
+              <div className="w-0.5 h-2 rounded-full bg-blue-300 animate-drizzle" style={{ animationDelay: "0.6s" }} />
+            </div>
+          </div>
+        );
+      
+      case 'snow':
+      case 'light snow':
+      case 'heavy snow':
+        return (
+          <div className="relative w-16 h-16">
+            <Cloud className="w-16 h-16 text-gray-400 animate-float" />
+            <div className="absolute top-10 left-4">
+              <div className="w-2 h-2 rounded-full bg-gray-100 animate-snow" />
+            </div>
+            <div className="absolute top-10 left-8">
+              <div className="w-2 h-2 rounded-full bg-gray-100 animate-snow-delayed" />
+            </div>
+            <div className="absolute top-10 left-12">
+              <div className="w-2 h-2 rounded-full bg-gray-100 animate-snow-delayed-2" />
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="relative w-16 h-16">
+            <Cloud className="w-16 h-16 text-gray-400 animate-float" />
+          </div>
+        );
+    }
+  };
+
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good Morning";
+    if (hour >= 12 && hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const getWeatherGradient = (condition: string | undefined) => {
+    if (!condition) return "from-gray-900 to-gray-800";
     
-            {/* Upcoming Weather Section */}
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mt-8">
-              <h2 className="text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
-                <Calendar /> Upcoming Weather
+    const conditionLower = condition?.toLowerCase();
+    const hour = new Date().getHours();
+    const isNight = hour < 6 || hour > 18;
+    
+    if (isNight) return "from-gray-900 via-blue-950 to-gray-900";
+    
+    switch (conditionLower) {
+      case 'clear':
+        return "from-blue-900 via-blue-800 to-blue-700";
+      case 'clouds':
+      case 'scattered clouds':
+      case 'broken clouds':
+      case 'few clouds':
+      case 'cloudy':
+        return "from-gray-800 via-slate-800 to-gray-700";
+      case 'rain':
+      case 'light rain':
+      case 'moderate rain':
+      case 'heavy intensity rain':
+        return "from-blue-950 via-slate-900 to-blue-900";
+      case 'thunderstorm':
+      case 'thunderstorm with light rain':
+      case 'thunderstorm with rain':
+        return "from-purple-950 via-gray-900 to-purple-900";
+      case 'drizzle':
+      case 'light intensity drizzle':
+      case 'mist':
+        return "from-teal-950 via-slate-900 to-teal-900";
+      case 'snow':
+      case 'light snow':
+      case 'heavy snow':
+        return "from-indigo-950 via-slate-900 to-indigo-900";
+      default:
+        return "from-gray-900 to-gray-800";
+    }
+  };
+
+  if (locationLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
+          <MapPin className="text-green-500 absolute inset-0 m-auto w-8 h-8" />
+        </div>
+        <p className="text-green-400 mt-6 text-xl font-medium">Detecting your location...</p>
+        <p className="text-gray-500 mt-2">Please allow location access when prompted</p>
+      </div>
+    );
+  }
+
+  if (loading && city) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950">
+        <div className="animate-spin-slow">
+          <Sun className="w-16 h-16 text-yellow-400" />
+        </div>
+        <p className="text-blue-400 mt-6 text-xl font-medium">Loading weather data for {city}...</p>
+        <p className="text-gray-500 mt-2">This will just take a moment</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 p-6">
+        <CloudRain className="w-20 h-20 text-red-400 mb-6" />
+        <div className="text-red-400 text-xl mb-4 text-center">{error}</div>
+        <button
+          onClick={() => {
+            setError(null);
+            setLocationLoading(true);
+            window.location.reload();
+          }}
+          className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all transform hover:scale-105 shadow-lg shadow-green-900/30"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!weather) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950">
+        <div className="text-gray-400 text-xl mb-4">Waiting for weather data...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen w-full bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white">
+      <div className="w-full h-full max-w-7xl mx-auto px-4 pt-6 pb-16">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 md:p-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white bg-gradient-to-r from-green-400 via-blue-300 to-green-400 bg-clip-text text-transparent animate-pulse-slow">
+              {getTimeOfDay()}!
+            </h1>
+            <p className="text-lg md:text-xl text-gray-400 mt-1">
+              Optimize Your Farm Operations with Real-Time Insights
+            </p>
+          </div>
+        </div>
+
+        {/* Location and Weather */}
+        <div className="p-4 md:p-8">
+          <div className="flex items-center mb-8">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-900/30 p-3 rounded-full border border-green-600/30 shadow-lg shadow-green-900/20 backdrop-blur-sm">
+                <MapPin className="text-green-400 w-6 h-6 animate-pulse" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-medium text-white">{weather.city}</span>
+                <span className="text-sm text-gray-400">
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+            {/* Current Weather */}
+            <div className={`bg-gradient-to-br ${getWeatherGradient(weather.condition)} rounded-2xl p-6 md:p-10 shadow-lg shadow-black/30 border border-gray-800/40 backdrop-blur-sm transition-all duration-500 hover:shadow-xl group`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex flex-col">
+                    <span className="text-6xl md:text-8xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-300 group-hover:to-green-300 transition-all duration-500">
+                      {weather.temperature}
+                    </span>
+                    <div className="flex flex-col md:flex-row md:items-baseline gap-2 mt-3">
+                      <p className="text-xl md:text-2xl text-gray-300">{weather.condition}</p>
+                      <p className="hidden md:block text-lg text-gray-400">/</p>
+                      <p className="text-lg text-gray-400">Feels like {weather.feelsLike}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="transform transition-transform duration-500 group-hover:scale-125 p-4">
+                  {getWeatherIcon(weather.condition)}
+                </div>
+              </div>
+            </div>
+
+            {/* Weather Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+              <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-blue-900/30 p-2 rounded-full">
+                    <Wind className="text-blue-400 w-6 h-6 animate-spin-slow" />
+                  </div>
+                  <span className="text-xl text-gray-300">Wind Status</span>
+                </div>
+                <p className="text-3xl md:text-4xl font-semibold text-white">{weather.windSpeed}</p>
+                <p className="text-lg text-gray-400 mt-2">Updated now</p>
+              </div>
+
+              <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-blue-900/30 p-2 rounded-full">
+                    <Droplets className="text-blue-400 w-6 h-6 animate-bounce" style={{ animationDuration: "3s" }} />
+                  </div>
+                  <span className="text-xl text-gray-300">Humidity</span>
+                </div>
+                <p className="text-3xl md:text-4xl font-semibold text-white">{weather.humidity}</p>
+                <p className="text-lg text-gray-400 mt-2">Humidity is good</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Weather Info */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 mt-6 md:mt-10">
+            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
+              <p className="text-xl text-gray-300 mb-4">UV Index</p>
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl md:text-4xl font-semibold text-white">{weather.uvIndex}</p>
+                  <p className="text-xl text-gray-400">UV</p>
+                </div>
+                <p className="text-lg text-gray-400 mt-2">{weather.uvDescription || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
+              <p className="text-xl text-gray-300 mb-4">Visibility</p>
+              <p className="text-3xl font-semibold text-white">{weather.visibility}</p>
+              <p className="text-lg text-gray-400 mt-2">Updated now</p>
+            </div>
+
+            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70 group">
+              <p className="text-xl text-gray-300 mb-4">Sunrise</p>
+              <div className="flex items-center gap-2">
+                <div className="text-yellow-500 group-hover:animate-sun">
+                  <Sun className="w-6 h-6" />
+                </div>
+                <p className="text-2xl md:text-3xl font-semibold text-white">{weather.sunrise}</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70 group">
+              <p className="text-xl text-gray-300 mb-4">Sunset</p>
+              <div className="flex items-center gap-2">
+                <div className="text-orange-500 group-hover:animate-pulse">
+                  <Moon className="w-6 h-6" />
+                </div>
+                <p className="text-2xl md:text-3xl font-semibold text-white">{weather.sunset}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Forecast */}
+          {forecast.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-2xl md:text-3xl font-semibold text-white mb-6 md:mb-8 pl-1">
+                <span className="bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
+                  {forecast.length} Day Forecast
+                </span>
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                {upcomingWeather.map((day) => (
-                  <div key={day.day} className="bg-gray-700 p-4 rounded-lg flex flex-col items-center">
-                    <day.icon className="text-green-400 h-10 w-10 mb-2" />
-                    <p className="text-lg font-semibold text-white">{day.day}</p>
-                    <p className="text-sm text-gray-300">{day.temperature}, {day.condition}</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-8">
+                {forecast.map((day, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm flex flex-col items-center transition-all duration-300 hover:bg-gray-800/70 hover:scale-105"
+                  >
+                    <div className="mb-2 h-16">
+                      {getWeatherIcon(day.condition)}
+                    </div>
+                    <p className="text-xl text-gray-300 font-medium mt-4">{day.day}</p>
+                    <p className="text-lg text-white mt-2">{day.temperature}</p>
+                    <p className="text-gray-400 mt-1 text-center">{day.condition}</p>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          )}
         </div>
-      );
+      </div>
+
+      {/* Add global styles */}
+      <style type="text/css">{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(-3px); }
+          50% { transform: translateY(2px); }
+        }
+
+        @keyframes rain-drop {
+          0% { transform: translateY(-10px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(10px); opacity: 0; }
+        }
+
+        @keyframes rain-drop-delayed {
+          0% { transform: translateY(-10px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(10px); opacity: 0; }
+        }
+
+        @keyframes rain-drop-delayed-2 {
+          0% { transform: translateY(-10px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(10px); opacity: 0; }
+        }
+
+        @keyframes flash {
+          0%, 100% { opacity: 0; }
+          10%, 90% { opacity: 1; }
+        }
+
+        @keyframes drizzle {
+          0% { transform: translateY(-5px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(5px); opacity: 0; }
+        }
+
+        @keyframes drizzle-delayed {
+          0% { transform: translateY(-5px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(5px); opacity: 0; }
+        }
+
+        @keyframes shine {
+          0% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -10; }
+        }
+
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes pulse-slow {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .animate-spin-slow {
+          animation: spin-slow 20s linear infinite;
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        .animate-float-delayed {
+          animation: float-delayed 3.5s ease-in-out infinite;
+        }
+
+        .animate-rain-drop {
+          animation: rain-drop 1.5s linear infinite;
+        }
+
+        .animate-rain-drop-delayed {
+          animation: rain-drop-delayed 1.5s linear infinite;
+          animation-delay: 0.2s;
+        }
+
+        .animate-rain-drop-delayed-2 {
+          animation: rain-drop-delayed-2 1.5s linear infinite;
+          animation-delay: 0.4s;
+        }
+
+        .animate-flash {
+          animation: flash 2s ease-out infinite;
+        }
+
+        .animate-drizzle {
+          animation: drizzle 1.2s linear infinite;
+        }
+
+        .animate-drizzle-delayed {
+          animation: drizzle-delayed 1.2s linear infinite;
+          animation-delay: 0.3s;
+        }
+
+        .animate-shine {
+          animation: shine 3s linear infinite;
+        }
+
+        .animate-twinkle {
+          animation: twinkle 2s ease-in-out infinite;
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+
+        @keyframes snow {
+          0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(10px) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes snow-delayed {
+          0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(10px) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes snow-delayed-2 {
+          0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(10px) rotate(360deg); opacity: 0; }
+        }
+
+        .animate-snow {
+          animation: snow 2s linear infinite;
+        }
+
+        .animate-snow-delayed {
+          animation: snow-delayed 2s linear infinite;
+          animation-delay: 0.3s;
+        }
+
+        .animate-snow-delayed-2 {
+          animation: snow-delayed-2 2s linear infinite;
+          animation-delay: 0.6s;
+        }
+
+        @keyframes cloud-move {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(10px); }
+        }
+
+        @keyframes sun-shine {
+          0%, 100% { opacity: 0.8; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .animate-cloud {
+          animation: cloud-move 4s ease-in-out infinite;
+        }
+
+        .animate-sun {
+          animation: sun-shine 3s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
 }
