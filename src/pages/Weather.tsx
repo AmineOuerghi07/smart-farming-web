@@ -5,14 +5,17 @@ import { WeatherService } from "../services/weatherService";
 interface WeatherData {
   city: string;
   temperature: string;
-  condition: string;
+  weather: string;
   humidity: string;
+  precipitation: string;
+  soilCondition: string;
+  advice: string;
   windSpeed: string;
   visibility: string;
-  uvIndex: string;
   sunrise: string;
   sunset: string;
   feelsLike: string;
+  uvIndex: string;
   uvDescription: string;
 }
 
@@ -32,37 +35,12 @@ export default function Weather() {
   const [themeMode, setThemeMode] = useState("dark");
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      setLocationLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            const cityData = await WeatherService.getCityFromCoords(latitude, longitude);
-            setCity(cityData);
-          } catch (err) {
-            console.error("Erreur lors de la récupération de la ville:", err);
-            setError("Impossible de récupérer votre localisation. Veuillez réessayer.");
-          } finally {
-            setLocationLoading(false);
-          }
-        },
-        (error) => {
-          console.error("Erreur de géolocalisation:", error);
-          setError("L'accès à votre localisation est nécessaire pour afficher la météo.");
-          setLocationLoading(false);
-        }
-      );
-    } else {
-      setError("La géolocalisation n'est pas supportée par votre navigateur.");
-      setLocationLoading(false);
-    }
-  }, []);
+    let isMounted = true;
 
-  useEffect(() => {
     const fetchData = async () => {
       if (!city) {
-        console.log('🏙️ Pas de ville définie, attente...');
+        console.log('🏙️ Pas de ville définie, utilisation de Tunis comme ville par défaut');
+        setCity("Tunis");
         return;
       }
       
@@ -75,32 +53,100 @@ export default function Weather() {
         
         const weatherData = await WeatherService.getWeather(city);
         console.log('📥 Données météo reçues:', weatherData);
-        setWeather(weatherData);
+        if (isMounted) {
+          setWeather(weatherData);
+        }
 
         try {
           const forecastData = await WeatherService.getForecast(city);
-          setForecast(forecastData);
+          if (isMounted) {
+            setForecast(forecastData);
+          }
         } catch (forecastErr) {
-          setForecast([]);
+          console.error('❌ Erreur lors de la récupération des prévisions:', forecastErr);
+          if (isMounted) {
+            setForecast([]);
+          }
         }
 
         console.log('✅ Données mises à jour avec succès');
       } catch (err) {
         console.error('❌ Erreur détaillée:', err);
         console.error('📝 Stack trace:', err instanceof Error ? err.stack : 'No stack trace');
-        if (err instanceof Error) {
-          setError(`Erreur lors de la récupération des données météo: ${err.message}`);
-        } else {
-          setError("Erreur lors de la récupération des données météo");
+        if (isMounted) {
+          if (err instanceof Error) {
+            setError(`Erreur lors de la récupération des données météo: ${err.message}. Utilisation de Tunis comme ville par défaut.`);
+            setCity("Tunis");
+          } else {
+            setError("Erreur lors de la récupération des données météo. Utilisation de Tunis comme ville par défaut.");
+            setCity("Tunis");
+          }
         }
       } finally {
-        setLoading(false);
-        console.log('🏁 Fin de la récupération des données');
+        if (isMounted) {
+          setLoading(false);
+          console.log('🏁 Fin de la récupération des données');
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [city]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const getLocation = async () => {
+      if (navigator.geolocation) {
+        setLocationLoading(true);
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+
+          const { latitude, longitude } = position.coords;
+          console.log('📍 Coordonnées:', { latitude, longitude });
+          
+          const cityData = await WeatherService.getCityFromCoords(latitude, longitude);
+          console.log('🏙️ Ville détectée:', cityData);
+          
+          if (isMounted && cityData && cityData.city) {
+            console.log('✅ Ville valide détectée:', cityData.city);
+            setCity(cityData.city);
+          } else {
+            console.log('⚠️ Ville non détectée, utilisation de Tunis comme ville par défaut');
+            setCity('Tunis');
+          }
+        } catch (err) {
+          console.error("Erreur lors de la récupération de la ville:", err);
+          if (isMounted) {
+            setError("Impossible de récupérer votre localisation. Utilisation de Tunis comme ville par défaut.");
+            setCity("Tunis");
+          }
+        } finally {
+          if (isMounted) {
+            setLocationLoading(false);
+          }
+        }
+      } else {
+        if (isMounted) {
+          setError("La géolocalisation n'est pas supportée par votre navigateur. Utilisation de Tunis comme ville par défaut.");
+          setCity("Tunis");
+          setLocationLoading(false);
+        }
+      }
+    };
+
+    getLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const getWeatherIcon = (condition: string | undefined) => {
     if (!condition) {
@@ -378,7 +424,7 @@ export default function Weather() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
             {/* Current Weather */}
-            <div className={`bg-gradient-to-br ${getWeatherGradient(weather.condition)} rounded-2xl p-6 md:p-10 shadow-lg shadow-black/30 border border-gray-800/40 backdrop-blur-sm transition-all duration-500 hover:shadow-xl group`}>
+            <div className={`bg-gradient-to-br ${getWeatherGradient(weather.weather)} rounded-2xl p-6 md:p-10 shadow-lg shadow-black/30 border border-gray-800/40 backdrop-blur-sm transition-all duration-500 hover:shadow-xl group`}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex flex-col">
@@ -386,14 +432,14 @@ export default function Weather() {
                       {weather.temperature}
                     </span>
                     <div className="flex flex-col md:flex-row md:items-baseline gap-2 mt-3">
-                      <p className="text-xl md:text-2xl text-gray-300">{weather.condition}</p>
+                      <p className="text-xl md:text-2xl text-gray-300">{weather.weather}</p>
                       <p className="hidden md:block text-lg text-gray-400">/</p>
                       <p className="text-lg text-gray-400">Feels like {weather.feelsLike}</p>
                     </div>
                   </div>
                 </div>
                 <div className="transform transition-transform duration-500 group-hover:scale-125 p-4">
-                  {getWeatherIcon(weather.condition)}
+                  {getWeatherIcon(weather.weather)}
                 </div>
               </div>
             </div>
@@ -493,7 +539,7 @@ export default function Weather() {
       </div>
 
       {/* Add global styles */}
-      <style type="text/css">{`
+      <style>{`
         @keyframes spin-slow {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
