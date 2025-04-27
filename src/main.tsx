@@ -13,6 +13,10 @@ import Login from './pages/Login.tsx'
 import SignUp from './pages/SignUp.tsx'
 import { AuthProvider } from './context/AuthContext'
 import EditProfile from './pages/EditProfile.tsx'
+import Store from './pages/Store.tsx'
+import ProductDetailPage from './pages/ProductDetailPage.tsx'
+import ShoppingCart from './pages/ShoppingCart.tsx'
+
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -28,10 +32,14 @@ createRoot(document.getElementById('root')!).render(
             <Route path='land' element={<Land />} />
             <Route path='settings' element={<Settings />} />
             <Route path='weather' element={<Weather />} />
+                    <Route path='store' element={<Store />} />
+        <Route path='product_details/:id' element={<ProductDetailPage />} />
+        <Route path='ShoppingCart' element={<ShoppingCart />} />
             <Route path='crop-management' element={<CropManagement />} />
           </Route>
         </Routes>
       </AuthProvider>
+
     </BrowserRouter>
   </StrictMode>,
 )
