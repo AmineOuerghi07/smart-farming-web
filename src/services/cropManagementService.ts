@@ -22,14 +22,25 @@ interface Region {
     plant: string; // ID de la plante
     quantity: number;
     _id: string;
+    plantingDate: Date;
   }[];
+}
+
+interface YieldStats {
+  // Define the structure of the YieldStats interface
 }
 
 class CropManagementService {
   private baseUrl = 'http://localhost:3000';
 
+  async getUserRegions(userId: string, token: string) {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const response = await axios.get(`${this.baseUrl}/lands/region/users/${userId}`, config);
+    return response.data; // tableau de régions
+  }
+
   async getUserPlants(userId: string, token: string): Promise<{
-    plants: (Plant & { quantity: number; regionId: string; regionName: string; landName: string })[];
+    plants: (Plant & { quantity: number; regionId: string; regionName: string; landName?: string; plantingDate?: string })[];
   }> {
     try {
       const config = {
@@ -38,57 +49,40 @@ class CropManagementService {
         }
       };
 
-      // 1. Récupérer les terres de l'utilisateur
-      console.log('Récupération des terres pour l\'utilisateur:', userId);
-      const landsResponse = await axios.get<Land[]>(
-        `${this.baseUrl}/lands/users/${userId}`,
-        config
-      );
-
-      if (!landsResponse.data?.length) {
-        console.log('Aucune terre trouvée pour cet utilisateur');
+      // Récupérer toutes les régions de l'utilisateur
+      const regions = await this.getUserRegions(userId, token);
+      if (!regions?.length) {
         return { plants: [] };
       }
-
-      // 2. Pour chaque terre, récupérer ses régions
-      const plants = [];
-      for (const land of landsResponse.data) {
-        console.log('Récupération des régions pour la terre:', land._id);
-        
-        // Récupérer les détails de chaque région
-        for (const regionId of land.regions) {
-          const regionResponse = await axios.get<Region>(
-            `${this.baseUrl}/lands/region/${regionId}`,
-            config
-          );
-
-          const region = regionResponse.data;
-          console.log('Détails de la région:', region);
-
-          // 3. Pour chaque plante dans la région, récupérer ses détails
-          if (region.plants?.length) {
-            for (const plantData of region.plants) {
+      const plants: any[] = [];
+      for (const region of regions) {
+        if (region.plants?.length) {
+          for (const plantData of region.plants) {
+            // Récupérer les infos détaillées de la plante
+            let plantDetails: Plant = { _id: '', name: '', imageUrl: '', description: '' };
+            try {
               const plantResponse = await axios.get<Plant>(
                 `${this.baseUrl}/lands/plant/${plantData.plant}`,
                 config
               );
-
-              plants.push({
-                ...plantResponse.data,
-                quantity: plantData.quantity,
-                regionId: region._id,
-                regionName: region.name,
-                landName: land.name,
-                imageUrl: plantResponse.data.imageUrl.startsWith('http') 
-                  ? plantResponse.data.imageUrl 
-                  : `${this.baseUrl}/assets/${plantResponse.data.imageUrl}`
-              });
+              plantDetails = plantResponse.data;
+            } catch (e) {
+              // Si la plante n'existe plus, on ignore
+              continue;
             }
+            plants.push({
+              ...plantDetails,
+              quantity: plantData.quantity,
+              regionId: region._id,
+              regionName: region.name,
+              plantingDate: plantData.plantingDate ? String(plantData.plantingDate) : undefined,
+              imageUrl: plantDetails.imageUrl?.startsWith('http')
+                ? plantDetails.imageUrl
+                : `${this.baseUrl}/assets/${plantDetails.imageUrl}`
+            });
           }
         }
       }
-
-      console.log('Plantes finales:', plants);
       return { plants };
     } catch (error) {
       console.error('Erreur détaillée:', error);
@@ -121,6 +115,31 @@ class CropManagementService {
       console.error('Error fetching plant details:', error);
       throw error;
     }
+  }
+
+  async getYieldStats(userId: string, token: string): Promise<YieldStats[]> {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+
+      const response = await axios.get<YieldStats[]>(
+        `${this.baseUrl}/lands/yield-stats/${userId}`,
+        config
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching yield stats:', error);
+      throw error;
+    }
+  }
+
+  async getRegionPlants(regionId: string, token: string) {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const response = await axios.get(`${this.baseUrl}/lands/region/${regionId}`, config);
+    return response.data?.plants || [];
   }
 }
 
