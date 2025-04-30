@@ -14,7 +14,7 @@ import Land from './pages/Land';
 import Store from './pages/Store';
 import ProductDetailPage from './pages/ProductDetailPage';
 import ShoppingCart from './pages/ShoppingCart';
-
+import OrderHistoryPage from './pages/OrderHistoryPage';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
@@ -30,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="store" element={<Store />} />
               <Route path="product_details/:id" element={<ProductDetailPage />} />
               <Route path="ShoppingCart" element={<ShoppingCart />} />
+              <Route path="MyBills" element={<OrderHistoryPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

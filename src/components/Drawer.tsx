@@ -5,9 +5,11 @@ import {
   CircleUser,
   Settings,
   Proportions,
-  Store
+  Store,
+  Scroll
 } from 'lucide-react';
 import { NavLink } from 'react-router';
+
 
 
 interface MenuItem {
@@ -30,6 +32,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
     { icon: <Cloud color='#05df72' />, label: 'Weather', route: "/weather" },
     { icon: <CircleUser color='#05df72' />, label: 'Profile', route: "/profile" },
     { icon: <Settings color='#05df72' />, label: 'Settings', route: "/settings" },
+    { icon: <Scroll color='#05df72' />, label: 'My Bills', route: "/MyBills" },
 
   ];
 
