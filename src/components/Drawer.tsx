@@ -6,7 +6,9 @@ import {
   Settings,
   Proportions,
   Store,
-  Scroll
+  Scroll,
+  Sprout
+
 } from 'lucide-react';
 import { NavLink } from 'react-router';
 
@@ -30,6 +32,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
     { icon: <Proportions color='#05df72' />, label: 'Lands', route: "/land" },
     { icon: <Store color='#05df72' />, label: 'Store', route: "/store" },
     { icon: <Cloud color='#05df72' />, label: 'Weather', route: "/weather" },
+    { icon: <Sprout color='#05df72'/>, label: 'Crops', route: "/crop-management" },
     { icon: <CircleUser color='#05df72' />, label: 'Profile', route: "/profile" },
     { icon: <Settings color='#05df72' />, label: 'Settings', route: "/settings" },
     { icon: <Scroll color='#05df72' />, label: 'My Bills', route: "/MyBills" },
@@ -38,6 +41,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className={`
+
         ${isOpen ? 'w-64' : 'w-0'} 
         overflow-hidden
         bg-gray-800 
