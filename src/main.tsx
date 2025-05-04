@@ -5,7 +5,6 @@ import App from './App.tsx'
 import { BrowserRouter, Routes, Route } from 'react-router'
 import Profile from './pages/Profile.tsx'
 import Dashboard from './pages/Dashboard.tsx'
-import Settings from './pages/Settings.tsx'
 import Weather from './pages/Weather.tsx'
 import Land from './pages/Land.tsx'
 import CropManagement from './pages/CropManagement.tsx'
@@ -30,7 +29,6 @@ createRoot(document.getElementById('root')!).render(
             <Route path='profile' element={<Profile />} />
             <Route path='profile/edit/:id' element={<EditProfile />} />
             <Route path='land' element={<Land />} />
-            <Route path='settings' element={<Settings />} />
             <Route path='weather' element={<Weather />} />
                     <Route path='store' element={<Store />} />
         <Route path='product_details/:id' element={<ProductDetailPage />} />
