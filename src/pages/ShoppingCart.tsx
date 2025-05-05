@@ -11,11 +11,71 @@ import { Order } from "../classes/Order";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 
 const ShoppingCart: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { darkMode } = useTheme();
   const dispatch = useDispatch();
+
+
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(true);
+  
+  
+
+
+    const getUserIdFromToken = (token: string): string | null => {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const { id } = JSON.parse(jsonPayload);
+        return id;
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
+        return null;
+      }
+    };
+  
+      
+
+    useEffect(() => {
+      const checkAuthAndFetchData = async () => {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          if (!token || !isAuthenticated) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+  
+          const userId = getUserIdFromToken(token);
+          if (!userId) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+        }catch (error) {
+        console.error('Error checking authentication:', error);
+        setLoading(false);
+        navigate('/login');
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
+
+
+
+
+
 
   // Load cart products on component mount
   useEffect(() => {

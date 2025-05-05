@@ -4,6 +4,7 @@ import { Range, getTrackBackground } from 'react-range';
 import { Product } from '../classes/Product';
 import { useNavigate } from 'react-router';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Store() {
     const navigate = useNavigate();
@@ -20,6 +21,62 @@ export default function Store() {
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState('default');
     const [categories, setCategories] = useState<string[]>([]);
+
+
+
+      const { isAuthenticated } = useAuth();
+      const [loading, setLoading] = useState(true);
+      
+      
+    
+    
+        const getUserIdFromToken = (token: string): string | null => {
+          try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            const { id } = JSON.parse(jsonPayload);
+            return id;
+          } catch (error) {
+            console.error('Erreur lors du décodage du token:', error);
+            return null;
+          }
+        };
+      
+          
+    
+        useEffect(() => {
+          const checkAuthAndFetchData = async () => {
+            try {
+              const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+              if (!token || !isAuthenticated) {
+    
+                setLoading(false);
+                navigate('/login');
+                return;
+              }
+      
+              const userId = getUserIdFromToken(token);
+              if (!userId) {
+    
+                setLoading(false);
+                navigate('/login');
+                return;
+              }
+            }catch (error) {
+            console.error('Error checking authentication:', error);
+            setLoading(false);
+            navigate('/login');
+          }
+        };
+
+        checkAuthAndFetchData();
+      }, [isAuthenticated, navigate]);
+    
+
+
 
     useEffect(() => {
         fetch('http://localhost:3000/product')
