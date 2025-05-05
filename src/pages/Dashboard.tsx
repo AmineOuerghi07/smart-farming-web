@@ -8,6 +8,8 @@ import axios from "axios";
 import { PowerBIEmbed } from 'powerbi-client-react';
 import { models, Report } from 'powerbi-client';
 import { useTheme } from '../context/ThemeContext';
+import { useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 
 const API_URL = 'http://localhost:3000';
 
@@ -17,6 +19,58 @@ const WeatherCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(true);
+  
+  
+
+
+    const getUserIdFromToken = (token: string): string | null => {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const { id } = JSON.parse(jsonPayload);
+        return id;
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
+        return null;
+      }
+    };
+  
+      
+
+    useEffect(() => {
+      const checkAuthAndFetchData = async () => {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          if (!token || !isAuthenticated) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+  
+          const userId = getUserIdFromToken(token);
+          if (!userId) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+        }catch (error) {
+        console.error('Error checking authentication:', error);
+        setLoading(false);
+        navigate('/login');
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -116,7 +170,8 @@ export default function DashboardPage() {
           },
         });
         if (regionsResponse.data) {
-          setRegions(regionsResponse.data);
+          let data : any = regionsResponse.data;
+          setRegions(data);
         }
       } catch (e) {
         setRegions([]);

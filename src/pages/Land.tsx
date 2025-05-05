@@ -1,10 +1,66 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Earth, PlusCircle } from "lucide-react";
 import Modal from "../components/Modal";
 import DashboardCard from "../components/DashboardCard";
 import { useTheme } from "../context/ThemeContext";
+import { useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function Land() {
+
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(true);
+  
+  
+
+
+    const getUserIdFromToken = (token: string): string | null => {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const { id } = JSON.parse(jsonPayload);
+        return id;
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
+        return null;
+      }
+    };
+  
+      
+
+    useEffect(() => {
+      const checkAuthAndFetchData = async () => {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          if (!token || !isAuthenticated) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+  
+          const userId = getUserIdFromToken(token);
+          if (!userId) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+        }catch (error) {
+        console.error('Error checking authentication:', error);
+        setLoading(false);
+        navigate('/login');
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
+
+
   const { darkMode } = useTheme();
   const [lands, setLands] = useState([
     { id: 1, name: "Green Valley Farm", size: "50 acres", regions: 3 },
