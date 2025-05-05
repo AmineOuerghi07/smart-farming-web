@@ -36,7 +36,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
     { icon: <Sprout color='#05df72'/>, label: 'Crops', route: "/crop-management" },
     { icon: <CircleUser color='#05df72' />, label: 'Profile', route: "/profile" },
     { icon: <Scroll color='#05df72' />, label: 'My Bills', route: "/MyBills" },
-
+  ]
 
   return (
     <div className={`

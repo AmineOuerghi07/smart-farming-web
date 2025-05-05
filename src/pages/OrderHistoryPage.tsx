@@ -15,6 +15,7 @@ interface BackendOrder {
   createdAt: string;
   totalAmount: number;
   orderStatus: string;
+  referenceId: string;
   orderItems: {
     quantity: number;
     productId: string;
@@ -23,7 +24,7 @@ interface BackendOrder {
 
 interface Order {
   id: string;
-  displayId: string; // NEW: Human-readable id
+  referenceId: string; // NEW: Human-readable id
   date: string;
   total: string;
   status: string;
@@ -36,10 +37,7 @@ export default function OrderHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 4;
 
-  const generateDisplayId = () => {
-    // Generate a random 6-digit number like "825491"
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
+
 
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrders((prev) => ({
@@ -56,7 +54,7 @@ export default function OrderHistoryPage() {
       const transformed: Order[] = await Promise.all(
         data.map(async (order) => ({
           id: order._id,
-          displayId: generateDisplayId(), // NEW
+          referenceId: order.referenceId, // NEW
           date: new Date(order.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -127,7 +125,7 @@ export default function OrderHistoryPage() {
                 <div className="p-4 flex items-center justify-between bg-gray-800 border-b border-gray-700">
                   <div>
                     <div className="flex items-center">
-                      <h3 className="text-lg font-medium">Order #{order.displayId}</h3> {/* 👈 Now using fancy number */}
+                      <h3 className="text-lg font-medium">Order #{order.referenceId}</h3> {/* 👈 Now using fancy number */}
                       <span
                         className={`ml-3 px-2 py-1 text-xs rounded-full ${order.status === 'Delivered' ? 'bg-green-600' : 'bg-blue-600'
                           }`}

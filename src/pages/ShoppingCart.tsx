@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useTheme } from "react";
+import React, { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { ArrowLeft, CreditCard, Sun, Moon } from "lucide-react";
 import extractShoppingCart from "../methodes/shoppingCartMethodes";
@@ -126,7 +126,7 @@ const ShoppingCart: React.FC = () => {
                       <button
                         className={`w-8 h-8 flex items-center justify-center ${darkMode ? 'bg-gray-800 text-green-400 hover:bg-gray-700' : 'bg-gray-100 text-green-600 hover:bg-gray-200'} rounded-md`}
                         onClick={() =>
-                          updateQuantity(product.id, product.quantity - 1)
+                          updateQuantity(product._id, product.quantity - 1)
                         }
 
                       >
@@ -138,7 +138,7 @@ const ShoppingCart: React.FC = () => {
                       <button
                         className={`w-8 h-8 flex items-center justify-center ${darkMode ? 'bg-gray-800 text-green-400 hover:bg-gray-700' : 'bg-gray-100 text-green-600 hover:bg-gray-200'} rounded-md`}
                         onClick={() =>
-                          updateQuantity(product.id, product.quantity + 1)
+                          updateQuantity(product._id, product.quantity + 1)
                         }
 
                       >
