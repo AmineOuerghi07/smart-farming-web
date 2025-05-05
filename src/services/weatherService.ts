@@ -30,138 +30,109 @@ interface Forecast {
 
 export class WeatherService {
   private static baseUrl = BASE_URL;
-  private static geoUrl = 'https://api.openweathermap.org/geo/1.0';
-  private static apiKey = 'f56277b8a7f619a6c0acfab85da42d89';
   private static lastRequestTime: number = 0;
-  private static readonly REQUEST_INTERVAL = 5000; // 5 secondes entre les requêtes
+  private static readonly REQUEST_INTERVAL = 5000; // 5 seconds between requests
+  private static readonly MAX_RETRIES = 3;
+  private static readonly RETRY_BASE_DELAY = 2000; // 2 seconds base delay for retries
 
-  static async getWeather(city: string): Promise<WeatherData | null> {
+  private static async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private static async withRateLimit<T>(fn: () => Promise<T>): Promise<T> {
     const now = Date.now();
     if (now - this.lastRequestTime < this.REQUEST_INTERVAL) {
-      console.log('⏳ [WeatherService] Attente entre les requêtes...');
-      await new Promise(resolve => setTimeout(resolve, this.REQUEST_INTERVAL));
-      return this.getWeather(city);
+      console.log('⏳ [WeatherService] Waiting between requests...');
+      await this.delay(this.REQUEST_INTERVAL - (now - this.lastRequestTime));
     }
+    this.lastRequestTime = Date.now();
+    return fn();
+  }
 
+  private static async withRetry<T>(
+    fn: () => Promise<T>,
+    retries: number = this.MAX_RETRIES,
+    attempt: number = 1
+  ): Promise<T> {
     try {
-      const url = `${this.baseUrl}?city=${encodeURIComponent(city)}`;
+      return await this.withRateLimit(fn);
+    } catch (error: any) {
+      if (attempt >= retries || error.response?.status !== 429) {
+        throw error;
+      }
+      const delay = this.RETRY_BASE_DELAY * Math.pow(2, attempt);
+      console.log(`🔄 [WeatherService] Retrying after ${delay}ms (attempt ${attempt + 1}/${retries})`);
+      await this.delay(delay);
+      return this.withRetry(fn, retries, attempt + 1);
+    }
+  }
+
+  static async getWeatherByCoordinates(lat: number, lon: number): Promise<WeatherData | null> {
+    try {
+      const url = `${this.baseUrl}/coordinates?lat=${lat}&lon=${lon}`;
       console.log('🔗 [WeatherService] URL:', url);
-      
-      this.lastRequestTime = now;
-      const response = await axios.get<WeatherData>(url);
+
+      const response = await this.withRetry(() =>
+        axios.get<WeatherData>(url)
+      );
+
       if (!response.data) {
-        throw new Error('Aucune donnée météo reçue');
+        throw new Error('No weather data received');
       }
       return response.data;
     } catch (error: any) {
-      console.error('❌ [WeatherService] Erreur:', error);
+      console.error('❌ [WeatherService] Error:', error);
       if (error.response) {
-        console.error('📝 Détails de l\'erreur:', {
+        console.error('📝 Error details:', {
           status: error.response.status,
           data: error.response.data
         });
       }
-      
-      // Si la ville n'est pas Tunis et qu'il y a une erreur, essayer avec Tunis
-      if (city.toLowerCase() !== 'tunis') {
-        console.log('🔄 [WeatherService] Tentative avec Tunis comme fallback');
-        return this.getWeather('Tunis');
-      }
-      
       return null;
     }
   }
 
   static async getHumidityDetails(lat: number, lon: number) {
     try {
-      const url = `${this.baseUrl}/humidity-details?lat=${lat}&lon=${lon}`;
+      const url = `${this.baseUrl}/humidity-details/coordinates?lat=${lat}&lon=${lon}`;
       console.log('🔗 [WeatherService] URL:', url);
-      
-      const response = await axios.get(url);
+
+      const response = await this.withRetry(() =>
+        axios.get(url)
+      );
+
       if (!response.data) {
-        throw new Error('Aucune donnée d\'humidité reçue');
+        throw new Error('No humidity data received');
       }
       return response.data;
     } catch (error: any) {
-      console.error('❌ [WeatherService] Erreur:', error);
-      throw new Error(error.response?.data?.message || 'Erreur lors de la récupération des données d\'humidité');
+      console.error('❌ [WeatherService] Error:', error);
+      throw new Error(error.response?.data?.message || 'Error fetching humidity data');
     }
   }
 
-  static async getForecast(city: string) {
+  static async getForecastByCoordinates(lat: number, lon: number) {
     try {
-      const url = `${this.baseUrl}/forecast?city=${encodeURIComponent(city)}`;
+      const url = `${this.baseUrl}/forecast/coordinates?lat=${lat}&lon=${lon}`;
       console.log('🔗 [WeatherService] URL:', url);
-      
-      const response = await axios.get(url);
+
+      const response = await this.withRetry(() =>
+        axios.get(url)
+      );
+
       if (!response.data) {
-        throw new Error('Aucune donnée de prévision reçue');
+        throw new Error('No forecast data received');
       }
       return response.data;
     } catch (error: any) {
-      console.error('❌ [WeatherService] Erreur:', error);
+      console.error('❌ [WeatherService] Error:', error);
       if (error.response) {
-        console.error('📝 Détails de l\'erreur:', {
+        console.error('📝 Error details:', {
           status: error.response.status,
           data: error.response.data
         });
       }
-      throw new Error(error.response?.data?.message || 'Erreur lors de la récupération des prévisions');
-    }
-  }
-
-  static async getCityFromCoords(latitude: number, longitude: number) {
-    const now = Date.now();
-    if (now - this.lastRequestTime < this.REQUEST_INTERVAL) {
-      console.log('⏳ [WeatherService] Attente entre les requêtes...');
-      return { city: 'Tunis' };
-    }
-
-    try {
-      const url = `${this.baseUrl}/city-from-coords?lat=${latitude}&lon=${longitude}`;
-      console.log('🔗 [WeatherService] URL:', url);
-      
-      this.lastRequestTime = now;
-      const response = await axios.get(url);
-      
-      if (!response.data) {
-        console.log('⚠️ [WeatherService] Aucune donnée de ville reçue');
-        return { city: 'Tunis' };
-      }
-      
-      // Extraire le nom de la ville du format "ville:tunisia"
-      let cityName = response.data;
-      if (typeof cityName === 'string' && cityName.includes(':')) {
-        cityName = cityName.split(':')[0].trim();
-      }
-      
-      // Vérifier si le nom de la ville contient des caractères non-latins
-      if (!cityName || /[^\u0000-\u007F]/.test(cityName)) {
-        console.log('⚠️ [WeatherService] Nom de ville non-latin détecté, utilisation de Tunis');
-        return { city: 'Tunis' };
-      }
-      
-      console.log('🏙️ [WeatherService] Ville extraite:', cityName);
-      return { city: cityName };
-    } catch (error: any) {
-      console.error('❌ [WeatherService] Erreur:', error);
-      return { city: 'Tunis' };
-    }
-  }
-
-  static async getCoordsFromCity(city: string): Promise<{ lat: number; lon: number }> {
-    try {
-      const url = `${this.geoUrl}/direct?q=${encodeURIComponent(city)},tn&limit=1&appid=${this.apiKey}`;
-      console.log('🔗 [WeatherService] Geocoding URL:', url);
-      
-      const response = await axios.get(url);
-      if (response.data && response.data.length > 0) {
-        return { lat: response.data[0].lat, lon: response.data[0].lon };
-      }
-      throw new Error('Ville non trouvée');
-    } catch (error: any) {
-      console.error('❌ [WeatherService] Erreur lors de la géolocalisation:', error);
-      return { lat: 36.8065, lon: 10.1815 }; // Fallback to Tunis coordinates
+      throw new Error(error.response?.data?.message || 'Error fetching forecast data');
     }
   }
 }

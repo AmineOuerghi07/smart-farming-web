@@ -1,29 +1,46 @@
 import { useEffect, useState } from 'react';
 import { Star, ShoppingCart, Plus, Minus, ArrowLeft } from 'lucide-react';
 import { Product } from '../classes/Product';
-import { useParams } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
+import { useDispatch } from 'react-redux';
+import { increment } from '../state/counter/counterSlice';
+import { incrementByAmount } from '../state/totalPriceSlice/totalPriceSlice';
+import { motion } from 'framer-motion'; // Add this line
 
 export default function ProductDetailPage() {
+    const navigate = useNavigate();
+    const [numberofreviews, setNumberOfReviews] = useState(0);
     const { id } = useParams();
     const [product, setProduct] = useState<any | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('description');
     const [relatedProducts, setProducts] = useState<Product[]>([]);
+    const [hoveredRating, setHoveredRating] = useState(0);
+    const [selectedRating, setSelectedRating] = useState(0);
+    const dispatch = useDispatch();
 
     useEffect(() => {
-        // Fetch the list of products
         fetch('http://localhost:3000/product')
             .then((res) => {
                 if (!res.ok) throw new Error('Failed to fetch products');
                 return res.json();
             })
             .then((data: Product[]) => {
-                // Find the product with the matching _id
                 const matchedProduct = data.find((product) => product._id === id);
-                const relatedProducts = data.filter((product) => product.category === matchedProduct?.category && product._id !== matchedProduct?._id);
+                const relatedProducts = data.filter(
+                    (product) =>
+                        product.category === matchedProduct?.category &&
+                        product._id !== matchedProduct?._id
+                );
                 if (matchedProduct) {
-                    setProduct(setProductdata(matchedProduct)); // Use setProductdata to format the product
-                    setProducts(relatedProducts); // Set related products
+                    setNumberOfReviews(matchedProduct.rating?.length || 0);
+                    const averageRating = matchedProduct.rating && matchedProduct.rating.length > 0
+                        ? matchedProduct.rating.reduce((acc, curr) => acc + curr.rating, 0) / matchedProduct.rating.length
+                        : 0;
+
+                    setProduct({ ...matchedProduct, rating: averageRating });
+                    setProducts(relatedProducts);
+                    setSelectedRating(Math.round(averageRating)); // Set default rating
                 } else {
                     setProduct(null);
                 }
@@ -33,23 +50,8 @@ export default function ProductDetailPage() {
             });
     }, [id]);
 
-    function setProductdata(data: Product) {
-        return {
-            ...data, // Spread the original product data
-            rating: 4.5, // Example static rating
-            reviews: 28, // Example static reviews count
-            stock: 10, // Example static stock
-            images: [
-                `http://localhost:3000/uploads/${data.image}`,
-                `http://localhost:3000/uploads/${data.image}`,
-                `http://localhost:3000/uploads/${data.image}`
-            ],
-            care: "Water thoroughly but infrequently, allowing soil to dry between waterings. Plant in well-draining soil in a location with at least 6 hours of sunlight. Protect from strong winds and frost in cooler climates."
-        };
-    }
-
     const incrementQuantity = () => {
-        if (product && quantity < product.stock) {
+        if (product && quantity < product.stockQuantity) {
             setQuantity(quantity + 1);
         }
     };
@@ -60,19 +62,69 @@ export default function ProductDetailPage() {
         }
     };
 
-    const renderStars = (rating: number) => {
+    const handleStarClick = async (ratingValue: number) => {
+        setSelectedRating(ratingValue);
+        console.log('Star clicked with rating:', ratingValue);
+
+        if (!product) return;
+
+        try {
+            const updatedRating = [...(product.rating || []), {
+                user_id: "67ce51510af75f3304655540",
+                rating: ratingValue
+            }];
+
+            const formData = new FormData();
+            formData.append('name', product.name);
+            formData.append('category', product.category);
+            formData.append('description', product.description);
+            formData.append('price', String(product.price));
+            formData.append('quantity', String(product.quantity));
+            formData.append('stockQuantity', String(product.stockQuantity));
+            formData.append('createdAt', new Date(product.createdAt || Date.now()).toISOString());
+            formData.append('updatedAt', new Date().toISOString());
+            formData.append('rating', JSON.stringify(updatedRating));
+
+            const response = await fetch(`http://localhost:3000/product/${product._id}`, {
+                method: 'PATCH',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update rating');
+            }
+
+            const updatedProduct = await response.json();
+            console.log('Product updated successfully:', updatedProduct);
+        } catch (error) {
+            console.error('Error updating rating:', error);
+        }
+    };
+
+
+    const renderStars = () => {
         const stars = [];
+        const effectiveRating = hoveredRating || selectedRating;
         for (let i = 1; i <= 5; i++) {
             stars.push(
-                <Star
+                <motion.div
                     key={i}
-                    size={16}
-                    fill={i <= Math.round(rating) ? "#FFD700" : "none"}
-                    color={i <= Math.round(rating) ? "#FFD700" : "#ccc"}
-                />
+                    whileTap={{ scale: 1.2 }}
+                    whileHover={{ scale: 1.1 }}
+                    onMouseEnter={() => setHoveredRating(i)}
+                    onMouseLeave={() => setHoveredRating(0)}
+                    onClick={() => handleStarClick(i)}
+                    className="cursor-pointer"
+                >
+                    <Star
+                        size={24}
+                        fill={i <= effectiveRating ? "#FFD700" : "none"}
+                        color={i <= effectiveRating ? "#FFD700" : "#ccc"}
+                    />
+                </motion.div>
             );
         }
-        return stars;
+        return <div className="flex">{stars}</div>;
     };
 
     if (!product) {
@@ -102,12 +154,20 @@ export default function ProductDetailPage() {
                             {/* Product Images */}
                             <div className="space-y-4">
                                 <div className="border rounded-lg overflow-hidden">
-                                    <img src={product.images[0]} alt={product.name} className="w-full h-64 object-cover" />
+                                    <img
+                                        src={`http://localhost:3000/uploads/${product.image}`}
+                                        alt={product.name}
+                                        className="w-full h-64 object-cover"
+                                    />
                                 </div>
                                 <div className="flex space-x-2">
-                                    {product.images.map((img: string, index: number) => (
+                                    {[0, 1, 2].map((_, index) => (
                                         <div key={index} className={`border rounded-lg overflow-hidden cursor-pointer ${index === 0 ? 'ring-2 ring-green-500' : ''}`}>
-                                            <img src={img} alt={`${product.name} - view ${index + 1}`} className="w-20 h-20 object-cover" />
+                                            <img
+                                                src={`http://localhost:3000/uploads/${product.image}`}
+                                                alt={`${product.name} - view ${index + 1}`}
+                                                className="w-20 h-20 object-cover"
+                                            />
                                         </div>
                                     ))}
                                 </div>
@@ -117,18 +177,21 @@ export default function ProductDetailPage() {
                             <div className="space-y-4">
                                 <h1 className="text-2xl font-bold text-white">{product.name}</h1>
 
+                                {/* ✨ Fancy Interactive Stars */}
                                 <div className="flex items-center">
-                                    <div className="flex mr-2">
-                                        {renderStars(product.rating)}
-                                    </div>
-                                    <span className="text-sm text-white">({product.reviews} reviews)</span>
+                                    {renderStars()}
+                                    <span className="text-sm text-white ml-2">
+                                        ({numberofreviews} reviews)
+                                    </span>
                                 </div>
 
                                 <p className="text-2xl font-bold text-green-400">${product.price.toFixed(2)}</p>
 
                                 <div className="text-sm text-white">
-                                    <span className={product.stock > 0 ? 'text-white' : 'text-red-600'}>
-                                        {product.stock > 0 ? `In Stock (${product.stock} available)` : 'Out of Stock'}
+                                    <span className={product.stockQuantity > 0 ? 'text-white' : 'text-red-600'}>
+                                        {product.stockQuantity > 0
+                                            ? `In Stock (${product.stockQuantity} available)`
+                                            : 'Out of Stock'}
                                     </span>
                                 </div>
 
@@ -147,7 +210,7 @@ export default function ProductDetailPage() {
                                             <button
                                                 onClick={incrementQuantity}
                                                 className="px-3 py-1 text-white hover:bg-gray-600"
-                                                disabled={quantity >= product.stock}
+                                                disabled={quantity >= product.stockQuantity}
                                             >
                                                 <Plus size={16} />
                                             </button>
@@ -155,7 +218,28 @@ export default function ProductDetailPage() {
                                     </div>
 
                                     <div className="flex space-x-2">
-                                        <button className="flex-1 bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-md flex items-center justify-center">
+                                        <button
+                                            className="flex-1 bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-md flex items-center justify-center"
+                                            onClick={() => {
+                                                const cart = JSON.parse(localStorage.getItem("shoppingCart") || "[]");
+                                                const existingProductIndex = cart.findIndex(
+                                                    (item: { id: string }) => item.id === product._id
+                                                );
+
+                                                if (existingProductIndex !== -1) {
+                                                    cart[existingProductIndex].quantity += quantity;
+                                                } else {
+                                                    cart.push({ id: product._id, quantity });
+                                                }
+
+                                                localStorage.setItem("shoppingCart", JSON.stringify(cart));
+
+                                                for (let i = 0; i < quantity; i++) {
+                                                    dispatch(increment());
+                                                }
+                                                dispatch(incrementByAmount(product.price * quantity));
+                                            }}
+                                        >
                                             <ShoppingCart size={18} className="mr-2" />
                                             Add to Cart
                                         </button>
@@ -168,15 +252,14 @@ export default function ProductDetailPage() {
                         </div>
 
                         {/* Tabs */}
-                        <div className="border- ">
-                            <div className="flex border-">
+                        <div className="border-t">
+                            <div className="flex">
                                 <button
                                     onClick={() => setActiveTab('description')}
                                     className={`px-4 py-3 font-medium ${activeTab === 'description' ? 'text-white border-b-2 border-green-400' : 'text-gray-300 hover:text-green-400'}`}
                                 >
                                     Description
                                 </button>
-
                                 <button
                                     onClick={() => setActiveTab('care')}
                                     className={`px-4 py-3 font-medium ${activeTab === 'care' ? 'text-white border-b-2 border-green-400' : 'text-gray-300 hover:text-green-400'}`}
@@ -189,22 +272,26 @@ export default function ProductDetailPage() {
                                 {activeTab === 'description' && (
                                     <p className="text-white">{product.description}</p>
                                 )}
-
                                 {activeTab === 'care' && (
-                                    <p className="text-white">{product.care}</p>
+                                    <p className="text-white">
+                                        Water thoroughly but infrequently, allowing soil to dry between waterings.
+                                        Plant in well-draining soil in a location with at least 6 hours of sunlight.
+                                        Protect from strong winds and frost in cooler climates.
+                                    </p>
                                 )}
                             </div>
                         </div>
 
                         {/* Related Products */}
-                        <div className="border- p-6">
+                        <div className="p-6">
                             <h2 className="text-xl text-white font-bold mb-4">You might also like</h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 {relatedProducts.length > 0 ? (
                                     relatedProducts.map((relatedProduct) => (
                                         <div
+                                            onClick={() => navigate(`/product_details/${relatedProduct._id}`)}
                                             key={relatedProduct._id}
-                                            className="border text-gray-200 rounded-lg overflow-hidden bg-gray-00 hover:shadow-md transition-shadow"
+                                            className="border text-gray-200 rounded-lg overflow-hidden bg-gray-800 hover:shadow-md transition-shadow cursor-pointer"
                                         >
                                             <img
                                                 src={`http://localhost:3000/uploads/${relatedProduct.image}`}
