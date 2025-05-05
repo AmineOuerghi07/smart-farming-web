@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import { useNavigate } from 'react-router-dom';
 import { cropManagementService } from '../services/cropManagementService';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
 const API_URL = 'http://localhost:3000';
 
@@ -47,7 +48,7 @@ const CropManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
+  const { darkMode } = useTheme();
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -70,22 +71,26 @@ const CropManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const checkAuthAndFetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token || !isAuthenticated) {
           setErrorMessage('Session expirée. Veuillez vous reconnecter.');
           setShowError(true);
           setLoading(false);
+          navigate('/login');
           return;
         }
+
         const userId = getUserIdFromToken(token);
         if (!userId) {
           setErrorMessage('Erreur de session. Veuillez vous reconnecter.');
           setShowError(true);
           setLoading(false);
+          navigate('/login');
           return;
         }
+
         // Récupérer toutes les régions de l'utilisateur
         const userRegions = await cropManagementService.getUserRegions(userId, token);
         
@@ -97,53 +102,58 @@ const CropManagement: React.FC = () => {
         }
         
         setRegions(userRegions);
+
         // Pour chaque région, récupérer ses plantes
         let allPlants: Plant[] = [];
         for (const region of userRegions) {
-          const regionPlants = await cropManagementService.getRegionPlants(region._id, token);
-          if (regionPlants.length) {
-            for (const plantData of regionPlants) {
-              let plantDetails: Plant = { _id: '', name: '', imageUrl: '', description: '' };
-              try {
-                const plantResponse = await axios.get<Plant>(
-                  `${API_URL}/lands/plant/${plantData.plant}`,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-                plantDetails = plantResponse.data;
-              } catch (e) {
-                continue;
+          try {
+            const regionPlants = await cropManagementService.getRegionPlants(region._id, token);
+            if (regionPlants.length) {
+              for (const plantData of regionPlants) {
+                try {
+                  const plantResponse = await axios.get<Plant>(
+                    `${API_URL}/lands/plant/${plantData.plant}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  const plantDetails = plantResponse.data;
+                  
+                  // Correction de l'URL de l'image
+                  let imageFileName = '';
+                  if (plantDetails.imageUrl) {
+                    imageFileName = plantDetails.imageUrl.split('/').pop() || '';
+                  }
+                  
+                  allPlants.push({
+                    ...plantDetails,
+                    quantity: plantData.quantity,
+                    regionId: region._id,
+                    regionName: region.name,
+                    plantingDate: plantDetails.plantingDate ? String(plantDetails.plantingDate) : undefined,
+                    imageUrl: imageFileName ? `${API_URL}/uploads/plants/${imageFileName}` : '',
+                  });
+                } catch (e) {
+                  console.error('Erreur lors de la récupération des détails de la plante:', e);
+                  continue;
+                }
               }
-              // Correction de l'URL de l'image
-              let imageFileName = '';
-              if (plantDetails.imageUrl) {
-                imageFileName = plantDetails.imageUrl.split('/').pop() || '';
-              }
-              allPlants.push({
-                ...plantDetails,
-                quantity: plantData.quantity,
-                regionId: region._id,
-                regionName: region.name,
-                plantingDate: plantData.plantingDate ? String(plantData.plantingDate) : undefined,
-                imageUrl: imageFileName ? `${API_URL}/uploads/plants/${imageFileName}` : '',
-              });
             }
+          } catch (e) {
+            console.error('Erreur lors de la récupération des plantes de la région:', e);
           }
         }
+        
         setPlants(allPlants);
         setLoading(false);
       } catch (error) {
-        setErrorMessage('Erreur lors de la récupération des données');
+        console.error('Erreur lors de la récupération des données:', error);
+        setErrorMessage('Erreur lors de la récupération des données. Veuillez réessayer.');
         setShowError(true);
         setLoading(false);
       }
     };
-    fetchData();
-  }, [isAuthenticated, navigate]);
 
-  // Toggle theme function
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-  };
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
 
   // Extraction des années et préparation des données pour la courbe
   const allPlantings = plants.filter(p => !!p.plantingDate);
@@ -181,6 +191,30 @@ const CropManagement: React.FC = () => {
     };
   });
 
+  const SEASONS = [
+    { id: "SPRING", label: "Printemps" },
+    { id: "SUMMER", label: "Été" },
+    { id: "AUTUMN", label: "Automne" },
+    { id: "WINTER", label: "Hiver" }
+  ];
+
+  const seasonStats = SEASONS.map(season => {
+    // On additionne la quantité de toutes les plantes qui ont cette saison ET qui ont été plantées dans l'année sélectionnée
+    const total = plants
+      .filter(plant =>
+        Array.isArray((plant as any).plantingSeasons) &&
+        (plant as any).plantingSeasons.includes(season.id) &&
+        plant.plantingDate &&
+        selectedYear !== undefined &&
+        new Date(plant.plantingDate).getFullYear() === selectedYear
+      )
+      .reduce((sum, plant) => sum + (plant.quantity || 0), 0);
+    return {
+      saison: season.label,
+      rendement: total
+    };
+  });
+
   if (loading) {
     return (
       <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
@@ -194,7 +228,6 @@ const CropManagement: React.FC = () => {
       <div className={`container mx-auto px-4 py-8 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'} min-h-screen`}>
         <div className="flex justify-between items-center mb-8">
           <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Gestion des Cultures</h1>
-         
         </div>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-lg shadow-lg text-center max-w-2xl mx-auto`}>
           <div className="mb-6">
@@ -234,12 +267,6 @@ const CropManagement: React.FC = () => {
       <div className={`container mx-auto px-4 py-8 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'} min-h-screen`}>
         <div className="flex justify-between items-center mb-8">
           <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Gestion des Cultures</h1>
-          <button 
-            onClick={toggleTheme}
-            className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'}`}
-          >
-            {darkMode ? 'Mode Clair' : 'Mode Sombre'}
-          </button>
         </div>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-lg shadow-lg text-center`}>
           <div className="mb-4">
@@ -288,7 +315,7 @@ const CropManagement: React.FC = () => {
   function getMonthlyCrops(plants: Plant[]) {
     const months = [
       'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ];
     // Regrouper par année/mois
     const cropsByMonth: { [key: string]: { [crop: string]: number } } = {};
@@ -326,82 +353,93 @@ const CropManagement: React.FC = () => {
   return (
     <div className={`min-h-screen w-full transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'}`}>
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="flex justify-between items-center mb-8">
           <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Gestion des Cultures</h1>
         </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-  <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 flex flex-col items-start transition-colors duration-300`}>
-    <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-700'} mb-4`}>Répartition des Plantes</h2>
-    <div className="w-full flex flex-col items-center">
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-            labelLine={false}
-            outerRadius={100}
-            innerRadius={50}
-            paddingAngle={3}
-            dataKey="value"
-            isAnimationActive={true} // <<< animation active
-            animationBegin={0} // <<< start immediately
-            animationDuration={1500} // <<< smooth animation duration (1.5s)
-            animationEasing="ease-out" // <<< smooth end
-          >
-            {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={darkMode ? DARK_COLORS[index % DARK_COLORS.length] : COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-              color: darkMode ? '#e2e8f0' : '#374151',
-              borderRadius: '8px',
-              padding: '10px',
-              border: 'none',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-            formatter={(value, name, props) => {
-              const numericValue = Number(value);
-              const total = chartData.reduce((sum, item) => sum + Number(item.value), 0);
-              const percent = total > 0 ? ((numericValue / total) * 100).toFixed(0) : '0';
-              return [`${numericValue} (${percent}%)`, name];
-            }}
-          />
-          <Legend
-            layout="horizontal"
-            verticalAlign="bottom"
-            align="center"
-            wrapperStyle={{ marginTop: 20 }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
+        {/* Affichage des cultures par saison - Section principale */}
+        <div className="mb-8">
+          <h2 className={`text-2xl font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>Cultures par Saison</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {["SPRING", "SUMMER", "AUTUMN", "WINTER"].map(season => {
+              const seasonPlants = plants.filter(
+                plant => Array.isArray((plant as any).plantingSeasons) && (plant as any).plantingSeasons.includes(season)
+              );
+              const seasonLabel = season === "SPRING" ? "Printemps" : season === "SUMMER" ? "Été" : season === "AUTUMN" ? "Automne" : "Hiver";
+              const color = season === "SPRING"
+                ? "bg-green-100 border-green-500 text-green-800"
+                : season === "SUMMER"
+                ? "bg-yellow-100 border-yellow-500 text-yellow-800"
+                : season === "AUTUMN"
+                ? "bg-orange-100 border-orange-500 text-orange-800"
+                : "bg-blue-100 border-blue-500 text-blue-800";
+              
+              const icon = season === "SPRING" 
+                ? "🌱" 
+                : season === "SUMMER" 
+                ? "☀️" 
+                : season === "AUTUMN" 
+                ? "🍂" 
+                : "❄️";
+              
+              return (
+                <div key={season} className={`rounded-lg p-4 border-2 shadow-md ${color}`}>
+                  <h3 className="text-lg font-bold mb-4 flex items-center">
+                    <span className="mr-2 text-xl">{icon}</span> {seasonLabel}
+                  </h3>
+                  {seasonPlants.length === 0 ? (
+                    <p className="text-gray-500 italic">Aucune culture pour cette saison.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {seasonPlants.map(plant => (
+                        <li key={plant._id} className="flex items-center border-b pb-2">
+                          <span className="font-semibold">{plant.name}</span>
+                          <span className="ml-auto bg-white px-2 py-1 rounded text-sm">
+                            {plant.quantity || 0} plants
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-4 text-right">
+                    <span className="text-sm font-semibold">
+                      Total: {seasonPlants.reduce((sum, p) => sum + (p.quantity || 0), 0)} plants
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-
-
-
-          {/* État des Régions */}
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow-lg transition-colors duration-300`}>
-            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>État des Régions</h2>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={[
-                    { name: 'Régions Connectées', value: regionStats.connected },
-                    { name: 'Régions Non Connectées', value: regionStats.notConnected }
-                  ]}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+        {/* Rendement par année */}
+        {years.length > 0 && (
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow-md mb-8`}>
+            <div className="flex flex-wrap gap-4 items-center mb-4">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>
+                Rendement par Saison
+              </h2>
+              <div className="flex items-center ml-auto">
+                <label className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mr-2`}>Année :</label>
+                <select
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(Number(e.target.value))}
+                  className={`p-2 rounded ${darkMode ? 'bg-gray-700 text-green-400 border-gray-600' : 'bg-gray-100 text-green-700 border-gray-300'} border`}
                 >
+                  {years.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={seasonStats} barSize={60}>
                   <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
-                  <XAxis dataKey="name" stroke={darkMode ? '#e2e8f0' : '#374151'} />
+                  <XAxis dataKey="saison" stroke={darkMode ? '#e2e8f0' : '#374151'} />
                   <YAxis stroke={darkMode ? '#e2e8f0' : '#374151'} />
-                  <Tooltip
-                    contentStyle={{
+                  <Tooltip 
+                    contentStyle={{ 
                       backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                       color: darkMode ? '#e2e8f0' : '#374151',
                       borderRadius: '8px',
@@ -409,156 +447,198 @@ const CropManagement: React.FC = () => {
                       border: 'none',
                       boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                     }}
-                    formatter={(value) => [`${value} régions`, 'Nombre']}
+                    formatter={(value) => [`${value} plants`, 'Quantité']}
                   />
-                  <Legend wrapperStyle={{ color: darkMode ? '#e2e8f0' : '#374151' }} />
-                  <Bar
-                    dataKey="value"
+                  <Bar 
+                    dataKey="rendement" 
                     radius={[4, 4, 0, 0]}
-                    barSize={40}
                   >
-                    {[
-                      <Cell key="cell-0" fill={darkMode ? '#4ade80' : '#00C49F'} />,
-                      <Cell key="cell-1" fill={darkMode ? '#f87171' : '#FF8042'} />
-                    ]}
+                    {seasonStats.map((entry, index) => {
+                      const colors = [
+                        darkMode ? '#4ade80' : '#22c55e', // Spring
+                        darkMode ? '#facc15' : '#eab308', // Summer
+                        darkMode ? '#f97316' : '#ea580c', // Autumn 
+                        darkMode ? '#60a5fa' : '#3b82f6'  // Winter
+                      ];
+                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                    })}
                   </Bar>
-                </ComposedChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Nouvelle section : Affichage par région */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {regions.map(region => (
-            <div 
-              key={region._id} 
-              className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg shadow p-3 mb-2 flex flex-col border transition-colors duration-300`}
-            >
-              <div className="flex justify-between items-center">
-                <h3 className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-700'} mb-1 truncate`}>{region.name}</h3>
-                <span className={`px-2 py-1 rounded-full text-xs ${region.isConnected 
-                  ? (darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800') 
-                  : (darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-800')}`}>
-                  {region.isConnected ? 'Connectée' : 'Non Connectée'}
-                </span>
-              </div>
-              <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} pt-1 flex-1`}>
-                {plants.filter(p => p.regionId === region._id).length === 0 ? (
-                  <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} italic text-xs py-4`}>Aucune plante dans cette région.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {plants.filter(p => p.regionId === region._id).map(plant => (
-                      <div 
-                        key={plant._id} 
-                        className={`flex items-center gap-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded p-2 shadow-sm transition-colors duration-300`}
-                      >
-                        <img
-                          src={plant.imageUrl}
-                          alt={plant.name}
-                          className={`w-10 h-10 object-contain rounded border ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'}`}
-                          onError={e => (e.currentTarget.src = '/assets/empty-crops.png')}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className={`font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'} text-sm truncate`}>{plant.name}</div>
-                          <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>Quantité : {plant.quantity}</div>
-                          {plant.plantingDate && (
-                            <div className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
-                              Plantée le {new Date(plant.plantingDate).toLocaleDateString('fr-FR')}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+        {/* GRID avec Régions et Tableau de performance */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+          {/* Section Mes Régions - Version compact et scrollable */}
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-4 xl:col-span-1`}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>Mes Régions</h2>
+              <span className={`text-sm px-2 py-1 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                {regions.length} région{regions.length > 1 ? 's' : ''}
+              </span>
             </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {monthlyCrops.map((monthData) => (
-            <div
-              key={monthData.month}
-              className={`rounded-2xl p-6 shadow-lg transition-colors duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} border`}
-            >
-              <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{monthData.month}</h3>
-              {monthData.crops.map(crop => (
-                <div key={crop.name} className="mb-3">
-                  <div className="flex justify-between items-center">
-                    <span className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{crop.name}</span>
-                    <span className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      {crop.value} <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>({crop.percent}%)</span>
-                    </span>
+            
+            {/* Scrollable container */}
+            <div className="max-h-96 overflow-y-auto pr-2 space-y-3">
+              {regions.map(region => (
+                <div 
+                  key={region._id} 
+                  className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'} rounded-lg p-3 transition-colors`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>{region.name}</h3>
+                    <div className={`h-2 w-2 rounded-full ${region.isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   </div>
-                  <div className={`w-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mt-1`}>
-                    <div
-                      className="h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${crop.percent}%`,
-                        background: darkMode 
-                          ? 'linear-gradient(90deg, #4ade80 0%, #34d399 100%)'
-                          : 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)'
-                      }}
-                    />
+                  
+                  <div className="flex justify-between text-xs mb-2">
+                    <span>{plants.filter(p => p.regionId === region._id).length} plantes</span>
+                    <span>Total: {plants.filter(p => p.regionId === region._id).reduce((sum, p) => sum + (p.quantity || 0), 0)} plants</span>
                   </div>
+                  
+                  {/* Top 3 plantes de la région */}
+                  {plants.filter(p => p.regionId === region._id).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {plants.filter(p => p.regionId === region._id)
+                        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
+                        .slice(0, 3)
+                        .map(plant => (
+                          <span 
+                            key={plant._id}
+                            className={`inline-block px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-200 text-gray-700'}`}
+                          >
+                            {plant.name} ({plant.quantity})
+                          </span>
+                        ))
+                      }
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          ))}
-        </div>
-
-        {/* Sélecteur d'année et courbe d'évolution */}
-        {years.length > 0 && (
-          <>
-            <div className={`mb-6 flex flex-wrap gap-4 items-center ${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 rounded-lg shadow-md`}>
-              <label className={`${darkMode ? 'text-gray-100' : 'text-gray-800'} font-semibold`}>Année :</label>
-              <select
-                value={selectedYear}
-                onChange={e => setSelectedYear(Number(e.target.value))}
-                className={`p-2 rounded ${darkMode ? 'bg-gray-700 text-green-400 border-gray-600' : 'bg-gray-200 text-green-700 border-gray-300'} border`}
-              >
-                {years.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+          </div>
+          
+          {/* Tableau d'analyse - Performance des cultures */}
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-4 xl:col-span-2`}>
+            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>Analyse des Cultures</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} border-b`}>
+                  <tr>
+                    <th className="px-4 py-2 text-left">Type</th>
+                    <th className="px-4 py-2 text-center">Meilleures Saisons</th>
+                    <th className="px-4 py-2 text-center">Total planté</th>
+                    <th className="px-4 py-2 text-center">Répartition</th>
+                    <th className="px-4 py-2 text-center">Dernière plantation</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {/* Grouper par type de plante et montrer des statistiques plus avancées */}
+                  {groupedPlants
+                    .sort((a, b) => b.quantity - a.quantity)
+                    .slice(0, 6) // Afficher seulement top 6
+                    .map(plant => {
+                      // Trouver la dernière plantation de ce type
+                      const lastPlanted = plants
+                        .filter(p => p.name === plant.name && p.plantingDate)
+                        .sort((a, b) => 
+                          new Date(b.plantingDate || '').getTime() - 
+                          new Date(a.plantingDate || '').getTime()
+                        )[0];
+                      
+                      // Nombre total de régions où cette plante est présente
+                      const regionsCount = new Set(
+                        plants
+                          .filter(p => p.name === plant.name)
+                          .map(p => p.regionId)
+                      ).size;
+                      
+                      // Pourcentage du total des plantes
+                      const totalPlants = plants.reduce((sum, p) => sum + (p.quantity || 0), 0);
+                      const percentage = totalPlants > 0 
+                        ? Math.round((plant.quantity / totalPlants) * 100) 
+                        : 0;
+                      
+                      return (
+                        <tr key={plant._id} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center">
+                              <img 
+                                src={plant.imageUrl} 
+                                alt={plant.name}
+                                className="w-8 h-8 mr-2 rounded-full object-cover"
+                                onError={e => (e.currentTarget.src = '/assets/empty-crops.png')}
+                              />
+                              <span className="font-medium">{plant.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            {(plant as any).plantingSeasons && Array.isArray((plant as any).plantingSeasons) ? (
+                              <div className="flex flex-wrap gap-1 justify-center">
+                                {(plant as any).plantingSeasons.map((season: string) => (
+                                  <span
+                                    key={season}
+                                    className={`inline-block w-2 h-2 rounded-full ${
+                                      season === "SPRING"
+                                        ? "bg-green-500"
+                                        : season === "SUMMER"
+                                        ? "bg-yellow-500"
+                                        : season === "AUTUMN"
+                                        ? "bg-orange-500"
+                                        : "bg-blue-500"
+                                    }`}
+                                    title={season === "SPRING"
+                                      ? "Printemps"
+                                      : season === "SUMMER"
+                                      ? "Été"
+                                      : season === "AUTUMN"
+                                      ? "Automne"
+                                      : "Hiver"}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-center font-semibold">
+                            {plant.quantity}
+                            <span className="text-xs ml-1 text-gray-500">
+                              ({regionsCount} {regionsCount > 1 ? 'régions' : 'région'})
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-green-500 h-2 rounded-full" 
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <div className="text-xs text-center mt-1">{percentage}%</div>
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            {lastPlanted?.plantingDate 
+                              ? new Date(lastPlanted.plantingDate).toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit', year: '2-digit'})
+                              : '-'
+                            }
+                          </td>
+                        </tr>
+                      );
+                    })
+                  }
+                </tbody>
+              </table>
             </div>
-
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow-lg mt-8 transition-colors duration-300`}>
-              <h2 className={`text-xl font-semibold mb-6 ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>
-                Évolution des plantations ({selectedYear})
-              </h2>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyStats}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
-                    <XAxis dataKey="mois" stroke={darkMode ? '#e2e8f0' : '#374151'} />
-                    <YAxis stroke={darkMode ? '#e2e8f0' : '#374151'} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                        color: darkMode ? '#e2e8f0' : '#374151',
-                        borderRadius: '8px',
-                        padding: '10px',
-                        border: 'none',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="rendement" 
-                      stroke={darkMode ? "#4ade80" : "#4ade80"} 
-                      strokeWidth={2}
-                      dot={{ r: 4, strokeWidth: 1, fill: darkMode ? "#4ade80" : "#4ade80" }}
-                      activeDot={{ r: 6, stroke: darkMode ? "#34d399" : "#22c55e", strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+            
+            {/* Message informatif si moins de plantes que la limite affichée */}
+            {groupedPlants.length > 6 && (
+              <div className="text-center mt-3 text-sm text-gray-500">
+                {groupedPlants.length - 6} autres types de cultures non affichés
               </div>
-            </div>
-          </>
-        )}
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

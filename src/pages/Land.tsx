@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Earth, PlusCircle } from "lucide-react";
 import Modal from "../components/Modal";
 import DashboardCard from "../components/DashboardCard";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Land() {
+  const { darkMode } = useTheme();
   const [lands, setLands] = useState([
     { id: 1, name: "Green Valley Farm", size: "50 acres", regions: 3 },
     { id: 2, name: "Sunset Orchards", size: "30 acres", regions: 2 },
@@ -22,14 +24,14 @@ export default function Land() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-gray-900 p-4 flex flex-col items-center">
+    <div className={`w-full min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'} p-4 flex flex-col items-center transition-colors duration-300`}>
       <div className="w-full max-w-6xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">Lands</h1>
+          <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Lands</h1>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md hover:bg-green-600 transition-all duration-300 ml-auto"
+            className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md hover:bg-green-600 transition-all duration-300"
           >
             <PlusCircle className="h-6 w-6" /> Add Land
           </button>
@@ -38,25 +40,25 @@ export default function Land() {
         {/* Land Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {lands.map((land) => (
-           <DashboardCard icon={Earth} key={land.id} title={land.name}>
-           <p className="text-gray-400">Size: {land.size}</p>
-           <p className="text-gray-400">Regions: {land.regions}</p>
-         </DashboardCard>
+            <DashboardCard icon={Earth} key={land.id} title={land.name}>
+              <p className={darkMode ? "text-gray-300" : "text-gray-600"}>Size: {land.size}</p>
+              <p className={darkMode ? "text-gray-300" : "text-gray-600"}>Regions: {land.regions}</p>
+            </DashboardCard>
           ))}
         </div>
       </div>
 
       {/* Add Land Modal */}
       {isModalOpen && (
-        <Modal isOpen = {isModalOpen} onClose={() => setIsModalOpen(false)}>
-          <h2 className="text-xl font-bold text-white mb-4">Add New Land</h2>
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <h2 className="text-xl font-bold mb-4">Add New Land</h2>
           <input
             type="text"
             name="name"
             value={newLand.name}
             onChange={handleChange}
             placeholder="Land Name"
-            className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white mb-2"
+            className={`w-full p-2 rounded border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} mb-2`}
           />
           <input
             type="text"
@@ -64,7 +66,7 @@ export default function Land() {
             value={newLand.size}
             onChange={handleChange}
             placeholder="Size (e.g., 50 hectares)"
-            className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white mb-2"
+            className={`w-full p-2 rounded border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} mb-2`}
           />
           <input
             type="number"
@@ -73,9 +75,12 @@ export default function Land() {
             onChange={handleChange}
             min="1"
             placeholder="Number of Regions"
-            className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white mb-4"
+            className={`w-full p-2 rounded border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} mb-4`}
           />
-          <button onClick={handleAddLand} className="bg-green-500 text-white px-4 py-2 rounded-lg w-full hover:bg-green-600">
+          <button 
+            onClick={handleAddLand} 
+            className="bg-green-500 text-white px-4 py-2 rounded-lg w-full hover:bg-green-600"
+          >
             Add Land
           </button>
         </Modal>

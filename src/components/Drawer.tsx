@@ -27,6 +27,7 @@ interface DrawerProps {
 
 // Sidebar/Drawer Component
 const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
+
   const menuItems: MenuItem[] = [
     { icon: <Home color='#05df72' />, label: 'Home', route: "/" },
     { icon: <Proportions color='#05df72' />, label: 'Lands', route: "/land" },
@@ -34,10 +35,8 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose }) => {
     { icon: <Cloud color='#05df72' />, label: 'Weather', route: "/weather" },
     { icon: <Sprout color='#05df72'/>, label: 'Crops', route: "/crop-management" },
     { icon: <CircleUser color='#05df72' />, label: 'Profile', route: "/profile" },
-    { icon: <Settings color='#05df72' />, label: 'Settings', route: "/settings" },
     { icon: <Scroll color='#05df72' />, label: 'My Bills', route: "/MyBills" },
 
-  ];
 
   return (
     <div className={`

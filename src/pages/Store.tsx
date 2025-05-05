@@ -3,9 +3,14 @@ import { Star, ChevronDown, Search } from 'lucide-react';
 import { Range, getTrackBackground } from 'react-range';
 import { Product } from '../classes/Product';
 import { useNavigate } from 'react-router';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Store() {
     const navigate = useNavigate();
+    const { darkMode } = useTheme();
+
+
+
 
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -116,7 +121,7 @@ export default function Store() {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-900">
-            <header className="bg-gray-900 text-white p-4">
+            <header className={`${darkMode ? 'bg-gray-900' : 'bg-white'} ${darkMode ? 'text-white' : 'text-gray-800'} p-4 shadow-md`}>
                 <div className="container mx-auto">
                     <h1 className="text-2xl font-bold">Store</h1>
                 </div>

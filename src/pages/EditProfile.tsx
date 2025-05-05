@@ -1,7 +1,8 @@
 import { useState, useEffect, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { UserService } from "../services/userService";
-import { CircleUser, Loader2, Camera, Save } from "lucide-react";
+import { CircleUser, Loader2, Camera, Save, Sun, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 
 interface UserProfile {
   _id: string;
@@ -19,6 +20,7 @@ const EditProfile = () => {
   const [fetchLoading, setFetchLoading] = useState(true);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { darkMode } = useTheme();
   
   const [formData, setFormData] = useState<UserProfile>({
     _id: '',
@@ -112,10 +114,10 @@ const EditProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 py-12 flex items-center justify-center">
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} py-12 flex items-center justify-center transition-colors duration-300`}>
       <div className="max-w-2xl w-full px-4">
-        <div className="bg-gray-800 shadow-xl rounded-2xl overflow-hidden">
-          {/* Header with green color scheme */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl rounded-2xl overflow-hidden transition-colors duration-300`}>
+          {/* Header with button and title */}
           <div className="relative h-28 bg-gradient-to-r from-green-600 to-green-500">
             <div className="absolute top-0 left-0 right-0 p-4 flex justify-center items-center">
               <h1 className="text-xl font-semibold text-white">Edit Profile</h1>
@@ -163,12 +165,12 @@ const EditProfile = () => {
             {fetchLoading ? (
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-                <span className="ml-2 text-gray-300">Loading profile data...</span>
+                <span className={`ml-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading profile data...</span>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Full Name
                   </label>
                   <input
@@ -176,13 +178,13 @@ const EditProfile = () => {
                     name="fullname"
                     value={formData.fullname}
                     onChange={handleInputChange}
-                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
+                    className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Email Address
                   </label>
                   <input
@@ -190,14 +192,14 @@ const EditProfile = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
+                    className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Phone Number
                     </label>
                     <input
@@ -205,13 +207,13 @@ const EditProfile = () => {
                       name="phonenumber"
                       value={formData.phonenumber}
                       onChange={handleInputChange}
-                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
+                      className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Address
                     </label>
                     <input
@@ -219,7 +221,7 @@ const EditProfile = () => {
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
+                      className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
                       required
                     />
                   </div>
