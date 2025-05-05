@@ -54,6 +54,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
+
+  const getUserIdFromToken = (token: string): string | null => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const { id } = JSON.parse(jsonPayload);
+      return id;
+    } catch (error) {
+      console.error('Erreur lors du décodage du token:', error);
+      return null;
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
       const response = await fetch(`${API_URL}/sign-in`, {
@@ -70,6 +86,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+      const id = getUserIdFromToken(data.token);
+      localStorage.setItem('userId', id || '');
       setIsAuthenticated(true);
       setUser(data.user);
       navigate('/');
@@ -105,6 +123,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
     setIsAuthenticated(false);
     setUser(null);
     navigate('/login');

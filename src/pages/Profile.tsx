@@ -55,6 +55,43 @@ const ProfileScreen = () => {
   const [newActivityDate, setNewActivityDate] = useState('');
   const [debug, setDebug] = useState<string | null>(null);
 
+
+  const { isAuthenticated } = useAuth();
+  
+  
+      
+
+    useEffect(() => {
+      const checkAuthAndFetchData = async () => {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          if (!token || !isAuthenticated) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+  
+          const userId = getUserIdFromToken(token);
+          if (!userId) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+        }catch (error) {
+        console.error('Error checking authentication:', error);
+        setLoading(false);
+        navigate('/login');
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
+
+
+
+
   useEffect(() => {
     const fetchUserProfileAndRegions = async () => {
       try {
@@ -342,7 +379,7 @@ const ProfileScreen = () => {
             <Globe className={`h-5 w-5 ${darkMode ? 'text-white' : 'text-gray-800'}`} />
           </button>
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-white/10 hover:bg-red-500/50' : 'bg-gray-200 hover:bg-red-200'}`}
             title="Déconnexion"
           >
