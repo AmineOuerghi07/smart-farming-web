@@ -1,3 +1,4 @@
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -31,6 +32,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/login" element={<Login />} />
           <Route path="/register" element={<SignUp />} />
+
             <Route path="/" element={<App />}>
               <Route index element={<Dashboard />} />
               <Route path="profile" element={<Profile />} />
