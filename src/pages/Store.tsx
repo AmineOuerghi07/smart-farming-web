@@ -9,6 +9,9 @@ export default function Store() {
     const navigate = useNavigate();
     const { darkMode } = useTheme();
 
+
+
+
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +78,9 @@ export default function Store() {
             case 'priceHigh':
                 result.sort((a, b) => b.price - a.price);
                 break;
-
+            case 'rating':
+                result.sort((a, b) => calculateAverageRating(b) - calculateAverageRating(a));
+                break;
             default:
                 break;
         }
@@ -89,6 +94,14 @@ export default function Store() {
         } else {
             setSelectedCategories([...selectedCategories, category]);
         }
+    };
+
+    const calculateAverageRating = (product: Product) => {
+        if (!product.rating || product.rating.length === 0) {
+            return 0;
+        }
+        const total = product.rating.reduce((sum, r) => sum + r.rating, 0);
+        return total / product.rating.length;
     };
 
     const renderStars = (rating: number) => {
@@ -116,11 +129,11 @@ export default function Store() {
 
             <main className="container mx-auto p-4 flex-grow text-gray-900">
                 <div className="flex flex-col md:flex-row gap-6">
+                    {/* Filters */}
                     <div className="w-full md:min-w-[260px] md:max-w-[260px] max-h-[600px] overflow-auto bg-gray-800 p-4 rounded-lg shadow-md flex-shrink-0">
-
-
                         <h2 className="text-lg text-white font-semibold mb-4">Filters</h2>
 
+                        {/* Search */}
                         <div className="mb-6">
                             <label className="block text-sm text-white font-medium mb-2">Search</label>
                             <div className="relative ">
@@ -135,6 +148,7 @@ export default function Store() {
                             </div>
                         </div>
 
+                        {/* Price Range */}
                         <div className="mb-6">
                             <label className="block text-sm text-white font-medium mb-2">
                                 Price Range: ${priceRange[0]} - ${priceRange[1]}
@@ -182,6 +196,7 @@ export default function Store() {
                             />
                         </div>
 
+                        {/* Categories */}
                         <div className="mb-6">
                             <label className="block text-sm text-white font-medium mb-2">Categories</label>
                             {categories.map(category => (
@@ -198,6 +213,7 @@ export default function Store() {
                             ))}
                         </div>
 
+                        {/* Sort */}
                         <div className="mb-6 ">
                             <label className="block text-sm text-white font-medium mb-2">Sort By</label>
                             <div className="relative">
@@ -216,23 +232,24 @@ export default function Store() {
                         </div>
                     </div>
 
+                    {/* Products */}
                     <div className="flex-grow">
                         {filteredProducts.length === 0 ? (
                             <div className="bg-white rounded-lg shadow-md p-6 text-center">
                                 <p className="text-xl text-white">No products found matching your criteria.</p>
                             </div>
                         ) : (
-
-                            <div className="grid grid-cols-1  sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredProducts.map((product) => (
-
-                                    <div key={product.id}
+                                    <div
+                                        key={product.id}
                                         onClick={() => navigate(`/product_details/${product._id}`)}
-                                        className=" bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                                        className="bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                                    >
                                         <img
                                             src={`http://localhost:3000/uploads/${product.image}`}
                                             alt={product.name}
-                                            className="w-full h-48  object-cover"
+                                            className="w-full h-48 object-cover"
                                         />
                                         <div className="p-4">
                                             <div className="flex justify-between items-start mb-2">
@@ -242,9 +259,9 @@ export default function Store() {
                                             <p className="text-white text-sm mb-2 line-clamp-2">{product.description}</p>
                                             <div className="flex items-center">
                                                 <div className="flex mr-1">
-                                                    {renderStars(5)}
+                                                    {renderStars(calculateAverageRating(product))}
                                                 </div>
-                                                <span className="text-sm text-white">({5})</span>
+                                                <span className="text-sm text-white">({product.rating?.length || 0})</span>
                                             </div>
                                             <div className="mt-3">
                                                 <button className="bg-green-600 text-white py-1 px-3 rounded-md text-sm hover:bg-green-400 transition-colors">
@@ -252,18 +269,13 @@ export default function Store() {
                                                 </button>
                                             </div>
                                         </div>
-
                                     </div>
-
                                 ))}
                             </div>
-
                         )}
                     </div>
                 </div>
             </main>
-
-
         </div>
     );
 }

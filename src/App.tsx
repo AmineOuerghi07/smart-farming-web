@@ -4,7 +4,13 @@ import Drawer from './components/Drawer';
 import { Outlet } from 'react-router';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from './state/store';
+
 const AppContent = () => {
+  const ShoppingItemscount = useSelector ((state : RootState) => state.counter.value);
+  const totalPrice = useSelector ((state : RootState) => state.totalPrice.value);
+  const dispatch = useDispatch();
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const { darkMode, toggleDarkMode } = useTheme();
 
@@ -31,11 +37,12 @@ const AppContent = () => {
           <a href='/ShoppingCart' className="flex items-center space-x-4 hover:bg-green-800 p-2 rounded-lg transition-colors">
             <div className="p-2 relative">
               <ShoppingCart size={24} color="white" />
-              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">0</span>
+              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">{ShoppingItemscount}</span>
             </div>
-            <span className="text-white">0.000 DT</span>
+            <span className="text-white">{totalPrice.toFixed(3)}DT</span>
           </a>
         </div>
+
       </nav>
       <div className="flex">
         <Drawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
