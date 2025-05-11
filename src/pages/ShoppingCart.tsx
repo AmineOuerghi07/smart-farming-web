@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useTheme } from "react";
+import React, { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { ArrowLeft, CreditCard, Sun, Moon } from "lucide-react";
 import extractShoppingCart from "../methodes/shoppingCartMethodes";
@@ -11,11 +11,71 @@ import { Order } from "../classes/Order";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 
 const ShoppingCart: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { darkMode } = useTheme();
   const dispatch = useDispatch();
+
+
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(true);
+  
+  
+
+
+    const getUserIdFromToken = (token: string): string | null => {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const { id } = JSON.parse(jsonPayload);
+        return id;
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
+        return null;
+      }
+    };
+  
+      
+
+    useEffect(() => {
+      const checkAuthAndFetchData = async () => {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          if (!token || !isAuthenticated) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+  
+          const userId = getUserIdFromToken(token);
+          if (!userId) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+        }catch (error) {
+        console.error('Error checking authentication:', error);
+        setLoading(false);
+        navigate('/login');
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
+
+
+
+
+
 
   // Load cart products on component mount
   useEffect(() => {
@@ -126,7 +186,7 @@ const ShoppingCart: React.FC = () => {
                       <button
                         className={`w-8 h-8 flex items-center justify-center ${darkMode ? 'bg-gray-800 text-green-400 hover:bg-gray-700' : 'bg-gray-100 text-green-600 hover:bg-gray-200'} rounded-md`}
                         onClick={() =>
-                          updateQuantity(product.id, product.quantity - 1)
+                          updateQuantity(product._id, product.quantity - 1)
                         }
 
                       >
@@ -138,7 +198,7 @@ const ShoppingCart: React.FC = () => {
                       <button
                         className={`w-8 h-8 flex items-center justify-center ${darkMode ? 'bg-gray-800 text-green-400 hover:bg-gray-700' : 'bg-gray-100 text-green-600 hover:bg-gray-200'} rounded-md`}
                         onClick={() =>
-                          updateQuantity(product.id, product.quantity + 1)
+                          updateQuantity(product._id, product.quantity + 1)
                         }
 
                       >

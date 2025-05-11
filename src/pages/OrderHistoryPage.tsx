@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Product } from '../classes/Product';
+import { useNavigate } from 'react-router';
+import { useAuth } from '../context/AuthContext';
 
 interface OrderItem {
   name: string;
@@ -15,6 +17,7 @@ interface BackendOrder {
   createdAt: string;
   totalAmount: number;
   orderStatus: string;
+  referenceId: string;
   orderItems: {
     quantity: number;
     productId: string;
@@ -23,7 +26,7 @@ interface BackendOrder {
 
 interface Order {
   id: string;
-  displayId: string; // NEW: Human-readable id
+  referenceId: string; // NEW: Human-readable id
   date: string;
   total: string;
   status: string;
@@ -36,10 +39,61 @@ export default function OrderHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 4;
 
-  const generateDisplayId = () => {
-    // Generate a random 6-digit number like "825491"
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
+
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(true);
+  
+  
+
+
+    const getUserIdFromToken = (token: string): string | null => {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const { id } = JSON.parse(jsonPayload);
+        return id;
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
+        return null;
+      }
+    };
+  
+      
+
+    useEffect(() => {
+      const checkAuthAndFetchData = async () => {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          if (!token || !isAuthenticated) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+  
+          const userId = getUserIdFromToken(token);
+          if (!userId) {
+
+            setLoading(false);
+            navigate('/login');
+            return;
+          }
+        }catch (error) {
+        console.error('Error checking authentication:', error);
+        setLoading(false);
+        navigate('/login');
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [isAuthenticated, navigate]);
+
+
+
 
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrders((prev) => ({
@@ -56,7 +110,7 @@ export default function OrderHistoryPage() {
       const transformed: Order[] = await Promise.all(
         data.map(async (order) => ({
           id: order._id,
-          displayId: generateDisplayId(), // NEW
+          referenceId: order.referenceId, // NEW
           date: new Date(order.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -127,7 +181,7 @@ export default function OrderHistoryPage() {
                 <div className="p-4 flex items-center justify-between bg-gray-800 border-b border-gray-700">
                   <div>
                     <div className="flex items-center">
-                      <h3 className="text-lg font-medium">Order #{order.displayId}</h3> {/* 👈 Now using fancy number */}
+                      <h3 className="text-lg font-medium">Order #{order.referenceId}</h3> {/* 👈 Now using fancy number */}
                       <span
                         className={`ml-3 px-2 py-1 text-xs rounded-full ${order.status === 'Delivered' ? 'bg-green-600' : 'bg-blue-600'
                           }`}
