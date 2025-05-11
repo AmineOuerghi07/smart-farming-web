@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { MapPin, Sun, Cloud, CloudRain, Wind, Droplets, CloudLightning, CloudDrizzle, Moon } from "lucide-react";
 import { WeatherService } from "../services/weatherService";
-import { useNavigate } from "react-router";
-import { useAuth } from "../context/AuthContext";
+import { useTheme } from '../context/ThemeContext';
+
+
+
 
 interface WeatherData {
   city: string; // Kept for compatibility, but not used in UI
@@ -34,62 +36,7 @@ export default function Weather() {
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
-
-
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  
-  
-
-
-    const getUserIdFromToken = (token: string): string | null => {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const { id } = JSON.parse(jsonPayload);
-        return id;
-      } catch (error) {
-        console.error('Erreur lors du décodage du token:', error);
-        return null;
-      }
-    };
-  
-      
-
-    useEffect(() => {
-      const checkAuthAndFetchData = async () => {
-        try {
-          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-          if (!token || !isAuthenticated) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-  
-          const userId = getUserIdFromToken(token);
-          if (!userId) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-        }catch (error) {
-        console.error('Error checking authentication:', error);
-        setLoading(false);
-        navigate('/login');
-      }
-    };
-
-    checkAuthAndFetchData();
-  }, [isAuthenticated, navigate]);
-
-
-
-
+  const { darkMode } = useTheme()
 
 
   useEffect(() => {
@@ -385,7 +332,7 @@ export default function Weather() {
 
   if (locationLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950">
+      <div className={`flex flex-col items-center justify-center min-h-screen ${darkMode ? 'bg-gray-950' : 'bg-blue-50'}`}>
         <div className="relative">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
           <MapPin className="text-green-500 absolute inset-0 m-auto w-8 h-8" />
@@ -398,7 +345,7 @@ export default function Weather() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 p-6">
+      <div className={`flex flex-col items-center justify-center min-h-screen ${darkMode ? 'bg-gray-950' : 'bg-blue-50'} p-6`}>
         <CloudRain className="w-20 h-20 text-red-400 mb-6" />
         <div className="text-red-400 text-xl mb-4 text-center">{error}</div>
         <button
@@ -417,34 +364,35 @@ export default function Weather() {
 
   if (loading && coords) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950">
+      <div className={`flex flex-col items-center justify-center min-h-screen ${darkMode ? 'bg-gray-950' : 'bg-blue-50'}`}>
         <div className="animate-spin-slow">
           <Sun className="w-16 h-16 text-yellow-400" />
         </div>
         <p className="text-blue-400 mt-6 text-xl font-medium">Loading weather data...</p>
         <p className="text-gray-500 mt-2">This will just take a moment</p>
+      
       </div>
     );
   }
 
   if (!weather) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950">
-        <div className="text-gray-400 text-xl mb-4">Waiting for weather data...</div>
+      <div className={`flex flex-col items-center justify-center min-h-screen ${darkMode ? 'bg-gray-950' : 'bg-blue-50'}`}>
+        <div className={`text-xl mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Waiting for weather data...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white">
+    <div className={`min-h-screen w-full ${darkMode ? 'bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white' : 'bg-gradient-to-b from-blue-50 via-white to-gray-100 text-gray-800'}`}>
       <div className="w-full h-full max-w-7xl mx-auto px-4 pt-6 pb-16">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white bg-gradient-to-r from-green-400 via-blue-300 to-green-400 bg-clip-text text-transparent animate-pulse-slow">
+            <h1 className={`text-3xl md:text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} bg-gradient-to-r ${darkMode ? 'from-green-400 via-blue-300 to-green-400' : 'from-green-600 via-blue-500 to-green-600'} bg-clip-text text-transparent animate-pulse-slow`}>
               {getTimeOfDay()}!
             </h1>
-            <p className="text-lg md:text-xl text-gray-400 mt-1">
+            <p className={`text-lg md:text-xl mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>
               Optimize Your Farm Operations with Real-Time Insights
             </p>
           </div>
@@ -454,12 +402,12 @@ export default function Weather() {
         <div className="p-4 md:p-8">
           <div className="flex items-center mb-8">
             <div className="flex items-center gap-3">
-              <div className="bg-green-900/30 p-3 rounded-full border border-green-600/30 shadow-lg shadow-green-900/20 backdrop-blur-sm">
-                <MapPin className="text-green-400 w-6 h-6 animate-pulse" />
+              <div className={`p-3 rounded-full border shadow-lg backdrop-blur-sm ${darkMode ? 'bg-green-900/30 border-green-600/30 shadow-green-900/20' : 'bg-green-100 border-green-300 shadow-green-200/50'}`}>
+                <MapPin className={`w-6 h-6 animate-pulse ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
               </div>
               <div className="flex flex-col">
-                <span className="text-2xl font-medium text-white">{weather.city || 'Votre position'}</span>
-                <span className="text-sm text-gray-400">
+                <span className={`text-2xl font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.city || 'Votre position'}</span>
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   {new Date().toLocaleDateString('en-US', { 
                     weekday: 'long',
                     day: 'numeric',
@@ -473,17 +421,17 @@ export default function Weather() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
             {/* Current Weather */}
-            <div className={`bg-gradient-to-br ${getWeatherGradient(weather.weather)} rounded-2xl p-6 md:p-10 shadow-lg shadow-black/30 border border-gray-800/40 backdrop-blur-sm transition-all duration-500 hover:shadow-xl group`}>
+            <div className={`bg-gradient-to-br ${darkMode ? getWeatherGradient(weather.weather) : 'from-blue-50 via-white to-blue-100'} rounded-2xl p-6 md:p-10 shadow-lg ${darkMode ? 'shadow-black/30 border-gray-800/40' : 'shadow-gray-200/50 border-gray-200'} border backdrop-blur-sm transition-all duration-500 hover:shadow-xl group`}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex flex-col">
-                    <span className="text-6xl md:text-8xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-300 group-hover:to-green-300 transition-all duration-500">
+                    <span className={`text-6xl md:text-8xl font-bold mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-300 group-hover:to-green-300 transition-all duration-500 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                       {weather.temperature}
                     </span>
                     <div className="flex flex-col md:flex-row md:items-baseline gap-2 mt-3">
-                      <p className="text-xl md:text-2xl text-gray-300">{weather.weather}</p>
-                      <p className="hidden md:block text-lg text-gray-400">/</p>
-                      <p className="text-lg text-gray-400">Feels like {weather.feelsLike}</p>
+                      <p className={`text-xl md:text-2xl ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{weather.weather}</p>
+                      <p className={`hidden md:block text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>/</p>
+                      <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Feels like {weather.feelsLike}</p>
                     </div>
                   </div>
                 </div>
@@ -495,66 +443,66 @@ export default function Weather() {
 
             {/* Weather Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-              <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
+              <div className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm transition-all duration-300 ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="bg-blue-900/30 p-2 rounded-full">
-                    <Wind className="text-blue-400 w-6 h-6 animate-spin-slow" />
+                  <div className={`p-2 rounded-full ${darkMode ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
+                    <Wind className={`w-6 h-6 animate-spin-slow ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                   </div>
-                  <span className="text-xl text-gray-300">Wind Status</span>
+                  <span className={`text-xl ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Wind Status</span>
                 </div>
-                <p className="text-3xl md:text-4xl font-semibold text-white">{weather.windSpeed}</p>
-                <p className="text-lg text-gray-400 mt-2">Updated now</p>
+                <p className={`text-3xl md:text-4xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.windSpeed}</p>
+                <p className={`text-lg mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Updated now</p>
               </div>
 
-              <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
+              <div className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm transition-all duration-300 ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="bg-blue-900/30 p-2 rounded-full">
-                    <Droplets className="text-blue-400 w-6 h-6 animate-bounce" style={{ animationDuration: "3s" }} />
+                  <div className={`p-2 rounded-full ${darkMode ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
+                    <Droplets className={`w-6 h-6 animate-bounce ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} style={{ animationDuration: "3s" }} />
                   </div>
-                  <span className="text-xl text-gray-300">Humidity</span>
+                  <span className={`text-xl ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Humidity</span>
                 </div>
-                <p className="text-3xl md:text-4xl font-semibold text-white">{weather.humidity}</p>
-                <p className="text-lg text-gray-400 mt-2">Humidity is good</p>
+                <p className={`text-3xl md:text-4xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.humidity}</p>
+                <p className={`text-lg mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Humidity is good</p>
               </div>
             </div>
           </div>
 
           {/* Additional Weather Info */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 mt-6 md:mt-10">
-            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
-              <p className="text-xl text-gray-300 mb-4">UV Index</p>
+            <div className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm transition-all duration-300 ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}>
+              <p className={`text-xl mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>UV Index</p>
               <div className="flex flex-col">
                 <div className="flex items-baseline gap-2">
-                  <p className="text-3xl md:text-4xl font-semibold text-white">{weather.uvIndex}</p>
-                  <p className="text-xl text-gray-400">UV</p>
+                  <p className={`text-3xl md:text-4xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.uvIndex}</p>
+                  <p className={`text-xl ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>UV</p>
                 </div>
-                <p className="text-lg text-gray-400 mt-2">{weather.uvDescription || 'N/A'}</p>
+                <p className={`text-lg mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{weather.uvDescription || 'N/A'}</p>
               </div>
             </div>
 
-            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70">
-              <p className="text-xl text-gray-300 mb-4">Visibility</p>
-              <p className="text-3xl font-semibold text-white">{weather.visibility}</p>
-              <p className="text-lg text-gray-400 mt-2">Updated now</p>
+            <div className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm transition-all duration-300 ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}>
+              <p className={`text-xl mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Visibility</p>
+              <p className={`text-3xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.visibility}</p>
+              <p className={`text-lg mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Updated now</p>
             </div>
 
-            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70 group">
-              <p className="text-xl text-gray-300 mb-4">Sunrise</p>
+            <div className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm transition-all duration-300 group ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}>
+              <p className={`text-xl mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sunrise</p>
               <div className="flex items-center gap-2">
                 <div className="text-yellow-500 group-hover:animate-sun">
                   <Sun className="w-6 h-6" />
                 </div>
-                <p className="text-2xl md:text-3xl font-semibold text-white">{weather.sunrise}</p>
+                <p className={`text-2xl md:text-3xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.sunrise}</p>
               </div>
             </div>
 
-            <div className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm transition-all duration-300 hover:bg-gray-800/70 group">
-              <p className="text-xl text-gray-300 mb-4">Sunset</p>
+            <div className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm transition-all duration-300 group ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}>
+              <p className={`text-xl mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sunset</p>
               <div className="flex items-center gap-2">
                 <div className="text-orange-500 group-hover:animate-pulse">
                   <Moon className="w-6 h-6" />
                 </div>
-                <p className="text-2xl md:text-3xl font-semibold text-white">{weather.sunset}</p>
+                <p className={`text-2xl md:text-3xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{weather.sunset}</p>
               </div>
             </div>
           </div>
@@ -562,7 +510,7 @@ export default function Weather() {
           {/* Forecast */}
           {forecast.length > 0 && (
             <div className="mt-10">
-              <h2 className="text-2xl md:text-3xl font-semibold text-white mb-6 md:mb-8 pl-1">
+              <h2 className={`text-2xl md:text-3xl font-semibold mb-6 md:mb-8 pl-1 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                 <span className="bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
                   {forecast.length} Day Forecast
                 </span>
@@ -571,14 +519,14 @@ export default function Weather() {
                 {forecast.map((day, index) => (
                   <div
                     key={index}
-                    className="bg-gray-900/70 rounded-xl p-6 md:p-8 shadow-lg border border-gray-800/40 backdrop-blur-sm flex flex-col items-center transition-all duration-300 hover:bg-gray-800/70 hover:scale-105"
+                    className={`rounded-xl p-6 md:p-8 shadow-lg border backdrop-blur-sm flex flex-col items-center transition-all duration-300 hover:scale-105 ${darkMode ? 'bg-gray-900/70 border-gray-800/40 hover:bg-gray-800/70' : 'bg-white/80 border-gray-200 hover:bg-white'}`}
                   >
                     <div className="mb-2 h-16">
                       {getWeatherIcon(day.condition)}
                     </div>
-                    <p className="text-xl text-gray-300 font-medium mt-4">{day.day}</p>
-                    <p className="text-lg text-white mt-2">{day.temperature}</p>
-                    <p className="text-gray-400 mt-1 text-center">{day.condition}</p>
+                    <p className={`text-xl font-medium mt-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{day.day}</p>
+                    <p className={`text-lg mt-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>{day.temperature}</p>
+                    <p className={`mt-1 text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{day.condition}</p>
                   </div>
                 ))}
               </div>

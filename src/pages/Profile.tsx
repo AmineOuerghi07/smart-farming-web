@@ -54,43 +54,7 @@ const ProfileScreen = () => {
   const [activityTab, setActivityTab] = useState<'todo' | 'history'>('todo');
   const [newActivityDate, setNewActivityDate] = useState('');
   const [debug, setDebug] = useState<string | null>(null);
-
-
-  const { isAuthenticated } = useAuth();
-  
-  
-      
-
-    useEffect(() => {
-      const checkAuthAndFetchData = async () => {
-        try {
-          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-          if (!token || !isAuthenticated) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-  
-          const userId = getUserIdFromToken(token);
-          if (!userId) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-        }catch (error) {
-        console.error('Error checking authentication:', error);
-        setLoading(false);
-        navigate('/login');
-      }
-    };
-
-    checkAuthAndFetchData();
-  }, [isAuthenticated, navigate]);
-
-
-
+  const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserProfileAndRegions = async () => {
@@ -233,24 +197,47 @@ const ProfileScreen = () => {
   };
 
   const handleToggleDone = async (regionId: string, activityId: string, done: boolean) => {
-    const token = localStorage.getItem('token');
-    const userId = getUserIdFromToken(token!);
-    if (!userId) return;
-    await axios.put(`${API_URL}/lands/region/${regionId}/activity/${activityId}/done`, { done }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    // Rafraîchir la liste des régions
-    const regionsResponse = await axios.get(`${API_URL}/lands/region/users/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (regionsResponse.data) {
-      setRegions(regionsResponse.data);
+    try {
+      setLoadingActivityId(activityId);
+      const token = localStorage.getItem('token');
+      const userId = getUserIdFromToken(token!);
+      if (!userId) {
+        console.error('Identifiant utilisateur non trouvé');
+        return;
+      }
+
+      // Utiliser l'API d'update activity en envoyant la description "Activité validée" 
+      // lorsqu'une activité est marquée comme terminée
+      await axios.put(
+        `${API_URL}/lands/region/${regionId}/activity/${activityId}`, 
+        { 
+          description: done ? "Activité validée" : "À faire", 
+          // Pas besoin d'envoyer la date car on ne la modifie pas
+        }, 
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      // Rafraîchir la liste des régions
+      const regionsResponse = await axios.get(`${API_URL}/lands/region/users/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (regionsResponse.data) {
+        setRegions(regionsResponse.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'activité:', error);
+      alert('Erreur lors de la mise à jour de l\'activité. Veuillez réessayer.');
+    } finally {
+      setLoadingActivityId(null);
     }
   };
 
@@ -367,28 +354,28 @@ const ProfileScreen = () => {
     );
 
   return (
-    <div className={`w-screen min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} py-8 px-2`}>
-      <div className={`w-full max-w-2xl ${darkMode ? 'bg-gray-800 border-white/20' : 'bg-white border-gray-200'} rounded-2xl shadow-2xl p-8 flex flex-col items-center mx-auto border transition-all duration-300 hover:shadow-green-400/30 hover:scale-[1.01]`}>
-        {/* Header Area avec icônes langue et déconnexion */}
-        <div className="absolute top-6 right-6 flex space-x-2 z-20">
+    <div className={`w-screen min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} py-12 px-4`}>
+      <div className={`w-full max-w-3xl ${darkMode ? 'bg-gray-800 border-white/20' : 'bg-white border-gray-200'} rounded-2xl shadow-2xl p-10 flex flex-col items-center mx-auto border transition-all duration-300 hover:shadow-green-400/30 relative`}>
+        {/* Header Area avec icônes langue et déconnexion - repositionnés à l'intérieur de la carte */}
+        <div className="absolute top-6 right-6 flex space-x-3 z-20">
           <button
             onClick={handleChangeLanguage}
-            className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-200 hover:bg-gray-300'}`}
+            className={`p-2.5 rounded-full transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
             title="Changer la langue"
           >
-            <Globe className={`h-5 w-5 ${darkMode ? 'text-white' : 'text-gray-800'}`} />
+            <Globe className={`h-5 w-5 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
           </button>
           <button
-            onClick={logout}
-            className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-white/10 hover:bg-red-500/50' : 'bg-gray-200 hover:bg-red-200'}`}
+            onClick={handleLogout}
+            className={`p-2.5 rounded-full transition-colors ${darkMode ? 'bg-gray-700 hover:bg-red-900/50' : 'bg-gray-100 hover:bg-red-100'}`}
             title="Déconnexion"
           >
-            <LogOut className={`h-5 w-5 ${darkMode ? 'text-white' : 'text-gray-800'}`} />
+            <LogOut className={`h-5 w-5 ${darkMode ? 'text-red-400' : 'text-red-500'}`} />
           </button>
         </div>
         {/* Cercle image profil, positionné en relatif */}
-        <div className="mt-8 mb-2 z-10">
-          <div className={`w-32 h-32 rounded-full flex items-center justify-center border-4 border-green-400 shadow-lg overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
+        <div className="mt-8 mb-6 z-10">
+          <div className={`w-36 h-36 rounded-full flex items-center justify-center border-4 border-green-500 shadow-lg overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
             {userProfile?.image ? (
               <img
                 src={`${API_URL}/uploads/${userProfile.image}`}
@@ -396,37 +383,35 @@ const ProfileScreen = () => {
                 className="w-full h-full object-cover rounded-full"
               />
             ) : (
-              <User className="w-16 h-16 text-green-500" />
+              <User className="w-20 h-20 text-green-500" />
             )}
           </div>
         </div>
         {/* Le reste de la carte commence ici, avec un padding-top pour laisser la place à l'image */}
         <div className="flex flex-col items-center w-full">
-          <h1 className={`text-3xl font-bold mt-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{userProfile?.fullname}</h1>
+          <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{userProfile?.fullname}</h1>
           {userProfile?.createdAt && (
-            <div className="flex items-center justify-center mt-1 text-gray-400 text-sm">
+            <div className="flex items-center justify-center mt-1 mb-4 text-gray-400 text-sm">
+              <Calendar className="w-4 h-4 mr-2" />
+              Membre depuis {new Date(userProfile.createdAt).toLocaleDateString()}
             </div>
           )}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 mb-8">
             <button
               onClick={handleEditProfile}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all"
+              className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all text-lg font-medium"
             >
-              <Edit className="h-4 w-4 inline mr-2" />
+              <Edit className="h-5 w-5 inline mr-2" />
               Modifier le profil
-            </button>
-            <button className={`px-4 py-2 rounded-lg transition-all ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}>
-              <Settings className="h-4 w-4 inline mr-2 text-green-400" />
-              Paramètres
             </button>
           </div>
         </div>
         {/* Tabs */}
-        <div className={`border-t w-full mt-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`border-t w-full mt-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex justify-center">
             <button
               onClick={() => setActiveTab('info')}
-              className={`px-8 py-4 font-medium transition-colors ${
+              className={`px-8 py-4 font-medium text-lg transition-colors ${
                 activeTab === 'info'
                   ? 'text-green-500 border-b-2 border-green-500'
                   : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
@@ -436,7 +421,7 @@ const ProfileScreen = () => {
             </button>
             <button
               onClick={() => setActiveTab('activity')}
-              className={`px-8 py-4 font-medium transition-colors ${
+              className={`px-8 py-4 font-medium text-lg transition-colors ${
                 activeTab === 'activity'
                   ? 'text-green-500 border-b-2 border-green-500'
                   : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
@@ -451,52 +436,38 @@ const ProfileScreen = () => {
         <div className="p-1 sm:p-1 w-full">
           {activeTab === 'info' && (
             <div className="space-y-9">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+              <div className="grid grid-cols-1 gap-8 w-full">
                 {/* Contact Info Card */}
-                <div className={`rounded-xl p-8 w-full ${darkMode ? 'bg-gray-700/50 border border-gray-600' : 'bg-gray-100 border border-gray-200'}`}>
-                  <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Coordonnées</h3>
-                  <div className="space-y-6">
+                <div className={`rounded-xl p-10 w-full ${darkMode ? 'bg-gray-700/50 border border-gray-600' : 'bg-gray-100 border border-gray-200'}`}>
+                  <h3 className={`text-2xl font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Coordonnées</h3>
+                  <div className="space-y-8">
                     <div className="flex items-start">
-                      <div className={`p-2 rounded-lg mr-4 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
-                        <Mail className="text-green-400 h-5 w-5" />
+                      <div className={`p-3 rounded-lg mr-6 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
+                        <Mail className="text-green-400 h-6 w-6" />
                       </div>
                       <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Email</p>
-                        <p className={darkMode ? 'text-white' : 'text-gray-900'}>{userProfile?.email}</p>
+                        <p className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Email</p>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-900'} text-lg font-medium`}>{userProfile?.email}</p>
                       </div>
                     </div>
                     <div className="flex items-start">
-                      <div className={`p-2 rounded-lg mr-4 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
-                        <Phone className="text-green-400 h-5 w-5" />
+                      <div className={`p-3 rounded-lg mr-6 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
+                        <Phone className="text-green-400 h-6 w-6" />
                       </div>
                       <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Téléphone</p>
-                        <p className={darkMode ? 'text-white' : 'text-gray-900'}>{userProfile?.phonenumber}</p>
+                        <p className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Téléphone</p>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-900'} text-lg font-medium`}>{userProfile?.phonenumber}</p>
                       </div>
                     </div>
                     <div className="flex items-start">
-                      <div className={`p-2 rounded-lg mr-4 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
-                        <MapPin className="text-green-400 h-5 w-5" />
+                      <div className={`p-3 rounded-lg mr-6 ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
+                        <MapPin className="text-green-400 h-6 w-6" />
                       </div>
                       <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Adresse</p>
-                        <p className={darkMode ? 'text-white' : 'text-gray-900'}>{userProfile?.address}</p>
+                        <p className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Adresse</p>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-900'} text-lg font-medium`}>{userProfile?.address}</p>
                       </div>
                     </div>
-                  </div>
-                </div>
-                {/* Quick Actions Card */}
-                <div className={`rounded-xl p-8 w-full ${darkMode ? 'bg-gray-700/50 border border-gray-600' : 'bg-gray-100 border border-gray-200'}`}>
-                  <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Actions rapides</h3>
-                  <div className="space-y-4">
-                    <button className={`w-full flex items-center justify-center p-4 rounded-lg transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}>
-                      <Settings className="mr-3 h-5 w-5 text-green-400" />
-                      Préférences de notification
-                    </button>
-                    <button className={`w-full flex items-center justify-center p-4 rounded-lg transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}>
-                      <Globe className="mr-3 h-5 w-5 text-green-400" />
-                      Changer la langue
-                    </button>
                   </div>
                 </div>
               </div>
@@ -563,21 +534,21 @@ const ProfileScreen = () => {
               </div>
               <div className="mt-6 space-y-8">
                 {regions.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12 flex flex-col items-center justify-center min-h-[400px] bg-opacity-50 rounded-xl border border-dashed border-gray-300">
                     <img 
-                      src="/assets/empty-crops.png" 
+                      src="/assets/crop.png" 
                       alt="Aucune région" 
-                      className="w-32 h-32 mx-auto mb-4"
+                      className="w-64 h-64 mx-auto mb-8"
                     />
-                    <h3 className={`text-lg font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                    <h3 className={`text-2xl font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'} mb-4`}>
                       Aucune région trouvée
                     </h3>
-                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
-                      Vous n'avez pas encore créé de régions. Créez une région pour commencer à gérer vos cultures.
+                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-8 max-w-md mx-auto text-lg`}>
+                      Vous n'avez pas encore créé de régions. Créez une région pour commencer à gérer vos cultures et suivre vos activités agricoles.
                     </p>
                     <button
                       onClick={() => navigate('/regions')}
-                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                      className="bg-green-600 text-white px-8 py-4 text-lg rounded-lg hover:bg-green-700 hover:scale-105 transition-all shadow-lg"
                     >
                       Créer une région
                     </button>
@@ -600,10 +571,26 @@ const ProfileScreen = () => {
                                d.getMonth() === today.getMonth() &&
                                d.getDate() === today.getDate();
                       };
-                      // À faire : non faites OU faites aujourd'hui
-                      const todo = activities.filter((act: any) => !act.done && act.date && isTodayOrFuture(act.date));
-                      // Historique : faites avant aujourd'hui
-                      const done = activities.filter((act: any) => act.done || (act.date && isPast(act.date) && !act.done));
+                      
+                      // Type pour les activités
+                      type ActivityType = {
+                        _id: string;
+                        description: string;
+                        date: string;
+                        done: boolean;
+                      };
+                      
+                      // À faire : uniquement les non-faites avec dates présentes ou futures
+                      const todo: ActivityType[] = activities.filter((act: any) => !act.done && act.date && isTodayOrFuture(act.date));
+                      // Historique : uniquement les activités faites OU avec dates passées (qui ne sont pas dans todo)
+                      const done: ActivityType[] = activities.filter((act: any) => {
+                        // Soit l'activité est marquée comme faite
+                        // Soit la date est passée et l'activité n'est pas faite
+                        const isDoneOrPast = act.done || (act.date && isPast(act.date) && !act.done);
+                        // On vérifie que l'activité n'est pas déjà dans la liste todo
+                        const notInTodoList = !todo.some(t => t._id === act._id);
+                        return isDoneOrPast && notInTodoList;
+                      });
                       if (activityTab === 'todo' && todo.length === 0) return undefined;
                       if (activityTab === 'history' && done.length === 0) return undefined;
                       return (
@@ -650,11 +637,19 @@ const ProfileScreen = () => {
                                         </div>
                                         {!act.done && (
                                           <button
-                                            className="ml-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors text-xs font-medium"
+                                            className="ml-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors text-xs font-medium min-w-[60px]"
                                             onClick={() => handleToggleDone(region._id, act._id, true)}
                                             title="Marquer comme fait"
+                                            disabled={loadingActivityId === act._id}
                                           >
-                                            Valider
+                                            {loadingActivityId === act._id ? (
+                                              <div className="flex items-center justify-center">
+                                                <div className="w-3 h-3 border-t-2 border-r-2 border-white rounded-full animate-spin mr-1"></div>
+                                                <span>...</span>
+                                              </div>
+                                            ) : (
+                                              "Valider"
+                                            )}
                                           </button>
                                         )}
                                       </div>
