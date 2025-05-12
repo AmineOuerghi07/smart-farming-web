@@ -14,6 +14,7 @@ interface OrderItem {
 
 interface BackendOrder {
   _id: string;
+  customerId: string;
   createdAt: string;
   totalAmount: number;
   orderStatus: string;
@@ -39,50 +40,53 @@ export default function OrderHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 4;
 
+  const [_customerId, setCustomerId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
-  
-  
 
 
-    const getUserIdFromToken = (token: string): string | null => {
+
+
+  const getUserIdFromToken = (token: string): string | null => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const { id } = JSON.parse(jsonPayload);
+      return id;
+    } catch (error) {
+      console.error('Erreur lors du décodage du token:', error);
+      return null;
+    }
+  };
+
+
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
       try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const { id } = JSON.parse(jsonPayload);
-        return id;
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+
+        const userId = getUserIdFromToken(token);
+        if (!userId) {
+
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+        setCustomerId(userId.toString());
+        console.log("bbbbbbbbbbbbbbbb", userId);
       } catch (error) {
-        console.error('Erreur lors du décodage du token:', error);
-        return null;
-      }
-    };
-  
-      
-
-    useEffect(() => {
-      const checkAuthAndFetchData = async () => {
-        try {
-          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-          if (!token || !isAuthenticated) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-  
-          const userId = getUserIdFromToken(token);
-          if (!userId) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-        }catch (error) {
         console.error('Error checking authentication:', error);
         setLoading(false);
         navigate('/login');
@@ -105,7 +109,9 @@ export default function OrderHistoryPage() {
   const fetchOrders = async () => {
     try {
       const res = await axios.get('http://localhost:3000/order');
-      const data = res.data as BackendOrder[];
+      let data = res.data as BackendOrder[];
+      data = data.filter((order) => order.customerId === _customerId);
+      console.log('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', _customerId);
 
       const transformed: Order[] = await Promise.all(
         data.map(async (order) => ({
@@ -151,8 +157,11 @@ export default function OrderHistoryPage() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (_customerId) {
+      fetchOrders();
+    }
+  }, [_customerId]);
+  
 
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
