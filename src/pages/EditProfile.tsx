@@ -57,7 +57,7 @@ const EditProfile = () => {
       const checkAuthAndFetchData = async () => {
         try {
           const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-          if (!token || !isAuthenticated) {
+          if (!token ) {
 
             setLoading(false);
             navigate('/login');
