@@ -52,6 +52,7 @@ const API_URL = 'http://localhost:3000/account';
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  
   const navigate = useNavigate();
 
 

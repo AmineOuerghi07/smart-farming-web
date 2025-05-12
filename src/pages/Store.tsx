@@ -21,7 +21,7 @@ export default function Store() {
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState('default');
     const [categories, setCategories] = useState<string[]>([]);
-
+    const [customerId, setCustomerId] = useState<string | null>(null);
 
 
       const { isAuthenticated } = useAuth();
@@ -51,8 +51,8 @@ export default function Store() {
           const checkAuthAndFetchData = async () => {
             try {
               const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-              if (!token || !isAuthenticated) {
-    
+              if (!token ) {
+                console.log("token", token);
                 setLoading(false);
                 navigate('/login');
                 return;
@@ -65,6 +65,7 @@ export default function Store() {
                 navigate('/login');
                 return;
               }
+                setCustomerId(userId);
             }catch (error) {
             console.error('Error checking authentication:', error);
             setLoading(false);
@@ -78,8 +79,10 @@ export default function Store() {
 
 
 
-    useEffect(() => {
-        fetch('http://localhost:3000/product')
+      useEffect(() => {
+        if (!customerId) return; // Wait until it's set
+    
+        fetch(`http://localhost:8000/recommend/${customerId}`)
             .then((res) => {
                 if (!res.ok) throw new Error('Failed to fetch products');
                 return res.json();
@@ -87,7 +90,7 @@ export default function Store() {
             .then((data) => {
                 setProducts(data);
                 setFilteredProducts(data);
-
+    
                 const prices = data.map((p: Product) => p.price);
                 const highest = Math.max(...prices);
                 setMaxPrice(highest);
@@ -96,7 +99,8 @@ export default function Store() {
             .catch((err) => {
                 console.error(err);
             });
-    }, []);
+    }, [customerId]); // depends on customerId
+    
 
     useEffect(() => {
         const uniqueCategories = [...new Set(products.map(product => product.category))];
