@@ -177,37 +177,37 @@ export default function Store() {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-900">
+        <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} transition-colors duration-300`}>
             <header className={`${darkMode ? 'bg-gray-900' : 'bg-white'} ${darkMode ? 'text-white' : 'text-gray-800'} p-4 shadow-md`}>
                 <div className="container mx-auto">
                     <h1 className="text-2xl font-bold">Store</h1>
                 </div>
             </header>
 
-            <main className="container mx-auto p-4 flex-grow text-gray-900">
+            <main className={`container mx-auto p-4 flex-grow ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Filters */}
-                    <div className="w-full md:min-w-[260px] md:max-w-[260px] max-h-[600px] overflow-auto bg-gray-800 p-4 rounded-lg shadow-md flex-shrink-0">
-                        <h2 className="text-lg text-white font-semibold mb-4">Filters</h2>
+                    <div className={`w-full md:min-w-[260px] md:max-w-[260px] max-h-[600px] overflow-auto ${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 rounded-lg shadow-md flex-shrink-0`}>
+                        <h2 className={`text-lg ${darkMode ? 'text-white' : 'text-gray-800'} font-semibold mb-4`}>Filters</h2>
 
                         {/* Search */}
                         <div className="mb-6">
-                            <label className="block text-sm text-white font-medium mb-2">Search</label>
-                            <div className="relative ">
+                            <label className={`block text-sm ${darkMode ? 'text-white' : 'text-gray-700'} font-medium mb-2`}>Search</label>
+                            <div className="relative">
                                 <input
                                     type="text"
                                     placeholder="Search products..."
-                                    className="w-full p-2 border rounded-md pl-8 text-white"
+                                    className={`w-full p-2 border rounded-md pl-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-white" />
+                                <Search className={`absolute left-2 top-2.5 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                             </div>
                         </div>
 
                         {/* Price Range */}
                         <div className="mb-6">
-                            <label className="block text-sm text-white font-medium mb-2">
+                            <label className={`block text-sm ${darkMode ? 'text-white' : 'text-gray-700'} font-medium mb-2`}>
                                 Price Range: ${priceRange[0]} - ${priceRange[1]}
                             </label>
                             <Range
@@ -225,7 +225,7 @@ export default function Store() {
                                             width: '100%',
                                             background: getTrackBackground({
                                                 values: priceRange,
-                                                colors: ['#ccc', '#4ade80', '#ccc'],
+                                                colors: [darkMode ? '#374151' : '#e5e7eb', '#4ade80', darkMode ? '#374151' : '#e5e7eb'],
                                                 min: 0,
                                                 max: maxPrice
                                             }),
@@ -245,7 +245,7 @@ export default function Store() {
                                             width: '16px',
                                             backgroundColor: '#4ade80',
                                             borderRadius: '50%',
-                                            boxShadow: '0 0 0 2px white',
+                                            boxShadow: darkMode ? '0 0 0 2px #374151' : '0 0 0 2px white',
                                             cursor: 'pointer'
                                         }}
                                     />
@@ -255,15 +255,15 @@ export default function Store() {
 
                         {/* Categories */}
                         <div className="mb-6">
-                            <label className="block text-sm text-white font-medium mb-2">Categories</label>
+                            <label className={`block text-sm ${darkMode ? 'text-white' : 'text-gray-700'} font-medium mb-2`}>Categories</label>
                             {categories.map(category => (
-                                <div key={category} className="flex items-center text-white mb-2">
+                                <div key={category} className={`flex items-center ${darkMode ? 'text-white' : 'text-gray-700'} mb-2`}>
                                     <input
                                         type="checkbox"
                                         id={category}
                                         checked={selectedCategories.includes(category)}
                                         onChange={() => handleCategoryChange(category)}
-                                        className="mr-2 "
+                                        className="mr-2"
                                     />
                                     <label htmlFor={category}>{category}</label>
                                 </div>
@@ -271,20 +271,24 @@ export default function Store() {
                         </div>
 
                         {/* Sort */}
-                        <div className="mb-6 ">
-                            <label className="block text-sm text-white font-medium mb-2">Sort By</label>
+                        <div className="mb-6">
+                            <label className={`block text-sm ${darkMode ? 'text-white' : 'text-gray-700'} font-medium mb-2`}>Sort By</label>
                             <div className="relative">
                                 <select
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value)}
-                                    className="w-full p-2 border bg-gray-700 text-white rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    className={`w-full p-2 border rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                                        darkMode 
+                                            ? 'bg-gray-700 border-gray-600 text-white' 
+                                            : 'bg-white border-gray-300 text-gray-800'
+                                    }`}
                                 >
-                                    <option value="default" className="bg-gray-700 text-white">Default</option>
-                                    <option value="priceLow" className="bg-gray-700 text-white">Price: Low to High</option>
-                                    <option value="priceHigh" className="bg-gray-700 text-white">Price: High to Low</option>
-                                    <option value="rating" className="bg-gray-700 text-white">Top Rated</option>
+                                    <option value="default" className={darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'}>Default</option>
+                                    <option value="priceLow" className={darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'}>Price: Low to High</option>
+                                    <option value="priceHigh" className={darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'}>Price: High to Low</option>
+                                    <option value="rating" className={darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'}>Top Rated</option>
                                 </select>
-                                <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400" />
+                                <ChevronDown className={`absolute right-2 top-2.5 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                             </div>
                         </div>
                     </div>
@@ -292,8 +296,8 @@ export default function Store() {
                     {/* Products */}
                     <div className="flex-grow">
                         {filteredProducts.length === 0 ? (
-                            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                                <p className="text-xl text-white">No products found matching your criteria.</p>
+                            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6 text-center`}>
+                                <p className={`text-xl ${darkMode ? 'text-white' : 'text-gray-800'}`}>No products found matching your criteria.</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -301,7 +305,7 @@ export default function Store() {
                                     <div
                                         key={product.id}
                                         onClick={() => navigate(`/product_details/${product._id}`)}
-                                        className="bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                                        className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow`}
                                     >
                                         <img
                                             src={`http://localhost:3000/uploads/${product.image}`}
@@ -310,18 +314,18 @@ export default function Store() {
                                         />
                                         <div className="p-4">
                                             <div className="flex justify-between items-start mb-2">
-                                                <h3 className="font-semibold text-lg text-white">{product.name}</h3>
-                                                <span className="font-bold text-green-600">${product.price.toFixed(2)}</span>
+                                                <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>{product.name}</h3>
+                                                <span className={`font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>${product.price.toFixed(2)}</span>
                                             </div>
-                                            <p className="text-white text-sm mb-2 line-clamp-2">{product.description}</p>
+                                            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-sm mb-2 line-clamp-2`}>{product.description}</p>
                                             <div className="flex items-center">
                                                 <div className="flex mr-1">
                                                     {renderStars(calculateAverageRating(product))}
                                                 </div>
-                                                <span className="text-sm text-white">({product.rating?.length || 0})</span>
+                                                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>({product.rating?.length || 0})</span>
                                             </div>
                                             <div className="mt-3">
-                                                <button className="bg-green-600 text-white py-1 px-3 rounded-md text-sm hover:bg-green-400 transition-colors">
+                                                <button className="bg-green-600 text-white py-1 px-3 rounded-md text-sm hover:bg-green-500 transition-colors">
                                                     Add to Cart
                                                 </button>
                                             </div>

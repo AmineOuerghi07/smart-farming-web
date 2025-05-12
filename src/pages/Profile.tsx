@@ -14,7 +14,9 @@ import {
   Calendar,
   Camera,
   ChevronRight,
-  Leaf
+  Leaf,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -55,51 +57,57 @@ const ProfileScreen = () => {
   const [newActivityDate, setNewActivityDate] = useState('');
   const [debug, setDebug] = useState<string | null>(null);
   const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchUserProfileAndRegions = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          setLoading(false);
+          setIsAuthenticated(false);
+          return;
+        }
+        
+        setIsAuthenticated(true);
         let userId = null;
-        if (token) {
-          userId = getUserIdFromToken(token);
-          setDebug(`userId extrait du token: ${userId}`);
-          if (userId) {
-            try {
-              const profileResponse = await axios.get(`${API_URL}/account/get-account/${userId}`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              });
-              setDebug(prev => prev + `\nRéponse backend: ${JSON.stringify(profileResponse.data)}`);
-              if (profileResponse.data) {
-                setUserProfile(profileResponse.data);
-              } else {
-                setError('Aucune donnée utilisateur trouvée.');
-              }
-            } catch (err: any) {
-              setDebug(prev => prev + `\nErreur backend: ${err?.response?.data?.message || err.message}`);
-              setError('Erreur lors de la récupération du profil utilisateur: ' + (err?.response?.data?.message || err.message));
+        userId = getUserIdFromToken(token);
+        setDebug(`userId extrait du token: ${userId}`);
+        if (userId) {
+          try {
+            const profileResponse = await axios.get(`${API_URL}/account/get-account/${userId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            setDebug(prev => prev + `\nRéponse backend: ${JSON.stringify(profileResponse.data)}`);
+            if (profileResponse.data) {
+              setUserProfile(profileResponse.data);
+            } else {
+              setError('Aucune donnée utilisateur trouvée.');
             }
-            // Récupérer toutes les régions de l'utilisateur
-            try {
-              const regionsResponse = await axios.get(`${API_URL}/lands/region/users/${userId}`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              });
-              if (regionsResponse.data) {
-                setRegions(regionsResponse.data);
-              }
-            } catch (err: any) {
-              // Si 404, on considère qu'il n'y a aucune région
-              if (err.response && err.response.status === 404) {
-                setRegions([]);
-              } else {
-                throw err;
-              }
+          } catch (err: any) {
+            setDebug(prev => prev + `\nErreur backend: ${err?.response?.data?.message || err.message}`);
+            setError('Erreur lors de la récupération du profil utilisateur: ' + (err?.response?.data?.message || err.message));
+          }
+          // Récupérer toutes les régions de l'utilisateur
+          try {
+            const regionsResponse = await axios.get(`${API_URL}/lands/region/users/${userId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            if (regionsResponse.data) {
+              setRegions(regionsResponse.data);
+            }
+          } catch (err: any) {
+            // Si 404, on considère qu'il n'y a aucune région
+            if (err.response && err.response.status === 404) {
+              setRegions([]);
+            } else {
+              throw err;
             }
           }
         }
@@ -340,6 +348,40 @@ const ProfileScreen = () => {
         </div>
       </div>
     );
+
+  if (!isAuthenticated) {
+    return (
+      <div className={`w-screen min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} py-8 px-2`}>
+        <div className={`w-full max-w-2xl ${darkMode ? 'bg-white/10 backdrop-blur-lg border-white/20' : 'bg-white border-gray-200'} rounded-2xl shadow-2xl p-8 flex flex-col items-center mx-auto border transition-all duration-300`}>
+          <div className="flex flex-col items-center justify-center text-center">
+            <div className={`p-6 rounded-full ${darkMode ? 'bg-red-500/20' : 'bg-red-100'} mb-6`}>
+              <Lock className={`w-20 h-20 ${darkMode ? 'text-red-400' : 'text-red-500'}`} />
+            </div>
+            <h2 className={`text-3xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Accès non autorisé
+            </h2>
+            <p className={`text-lg mb-8 max-w-md ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Vous devez être connecté pour voir votre profil et gérer vos informations.
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => navigate('/login')}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all text-lg font-medium"
+              >
+                Se connecter
+              </button>
+              <button 
+                onClick={() => navigate('/register')}
+                className={`px-6 py-3 rounded-lg transition-all text-lg font-medium ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+              >
+                Créer un compte
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error)
     return (
