@@ -43,6 +43,7 @@ export default function ProductDetailPage() {
       
           
     
+        /*
         useEffect(() => {
           const checkAuthAndFetchData = async () => {
             try {
@@ -70,7 +71,7 @@ export default function ProductDetailPage() {
 
         checkAuthAndFetchData();
       }, [isAuthenticated, navigate]);
-
+        */
 
 
 

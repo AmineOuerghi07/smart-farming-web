@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { Product } from '../classes/Product';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import jsPDF from 'jspdf';
+
 import { useTheme } from '../context/ThemeContext';
+
 
 interface OrderItem {
   name: string;
@@ -15,6 +18,7 @@ interface OrderItem {
 
 interface BackendOrder {
   _id: string;
+  customerId: string;
   createdAt: string;
   totalAmount: number;
   orderStatus: string;
@@ -27,7 +31,7 @@ interface BackendOrder {
 
 interface Order {
   id: string;
-  referenceId: string; // NEW: Human-readable id
+  referenceId: string;
   date: string;
   total: string;
   status: string;
@@ -39,62 +43,55 @@ export default function OrderHistoryPage() {
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 4;
+  const [_customerId, setCustomerId] = useState<string | null>(null);
   const { darkMode } = useTheme();
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
-  
-  
 
+  const getUserIdFromToken = (token: string): string | null => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const { id } = JSON.parse(jsonPayload);
+      return id;
+    } catch (error) {
+      console.error('Erreur lors du décodage du token:', error);
+      return null;
+    }
+  };
 
-    const getUserIdFromToken = (token: string): string | null => {
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
       try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const { id } = JSON.parse(jsonPayload);
-        return id;
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+        const userId = getUserIdFromToken(token);
+        if (!userId) {
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+        setCustomerId(userId.toString());
       } catch (error) {
-        console.error('Erreur lors du décodage du token:', error);
-        return null;
-      }
-    };
-  
-      
-
-    useEffect(() => {
-      const checkAuthAndFetchData = async () => {
-        try {
-          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-          if (!token || !isAuthenticated) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-  
-          const userId = getUserIdFromToken(token);
-          if (!userId) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-        }catch (error) {
         console.error('Error checking authentication:', error);
         setLoading(false);
         navigate('/login');
       }
     };
-
     checkAuthAndFetchData();
   }, [isAuthenticated, navigate]);
-
-
-
 
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrders((prev) => ({
@@ -106,12 +103,12 @@ export default function OrderHistoryPage() {
   const fetchOrders = async () => {
     try {
       const res = await axios.get('http://localhost:3000/order');
-      const data = res.data as BackendOrder[];
-
+      let data = res.data as BackendOrder[];
+      data = data.filter((order) => order.customerId === _customerId);
       const transformed: Order[] = await Promise.all(
         data.map(async (order) => ({
           id: order._id,
-          referenceId: order.referenceId, // NEW
+          referenceId: order.referenceId,
           date: new Date(order.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -124,7 +121,6 @@ export default function OrderHistoryPage() {
               try {
                 const productRes = await axios.get(`http://localhost:3000/product/${item.productId}`);
                 const productData = productRes.data as Product;
-
                 return {
                   name: productData.name ?? 'Unknown Product',
                   quantity: item.quantity,
@@ -144,7 +140,6 @@ export default function OrderHistoryPage() {
           ),
         }))
       );
-
       setOrders(transformed);
     } catch (err) {
       console.error('Failed to fetch orders', err);
@@ -152,8 +147,10 @@ export default function OrderHistoryPage() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (_customerId) {
+      fetchOrders();
+    }
+  }, [_customerId]);
 
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
@@ -166,11 +163,124 @@ export default function OrderHistoryPage() {
     }
   };
 
+  const generatePDF = () => {
+    const pdf = new jsPDF();
+    let y = 20;
+
+    // Header bar
+    pdf.setFillColor(40, 102, 183);
+    pdf.rect(0, 0, 210, 30, 'F');
+    pdf.setFontSize(22);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(' Order History Report', 14, 20);
+
+    y = 40;
+
+    orders.forEach((order, orderIndex) => {
+      if (y > 250) {
+        pdf.addPage();
+        y = 20;
+      }
+
+      const referenceId = order.referenceId || '-';
+      const orderDate = order.date || '-';
+      const status = order.status || '-';
+      const total = order.total || '0';
+
+      // Order Card
+      pdf.setDrawColor(220);
+      pdf.setFillColor(245, 248, 255);
+      pdf.roundedRect(12, y, 186, 12 + 6 + (order.items?.length || 0) * 7 + 14, 3, 3, 'FD');
+
+      y += 10;
+      pdf.setFontSize(13);
+      pdf.setTextColor(33, 37, 41);
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`Order #${referenceId}`, 16, y);
+
+      y += 6;
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(` Date: ${orderDate}`, 16, y);
+      pdf.text(` Status: ${status}`, 80, y);
+      pdf.text(` Total: ${total}`, 150, y);
+
+      y += 6;
+
+      // Table header
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(30, 30, 30);
+      pdf.text(' Item', 16, y);
+      pdf.text('Qty', 100, y);
+      pdf.text('Price', 130, y);
+      pdf.text('Total', 160, y);
+      y += 2;
+      pdf.setDrawColor(230);
+      pdf.line(16, y, 190, y);
+      y += 4;
+
+      // Items
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(9);
+      order.items?.forEach((item, index) => {
+        if (y > 270) {
+          pdf.addPage();
+          y = 20;
+        }
+
+        if (index % 2 === 0) {
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(14, y - 3, 182, 7, 'F');
+        }
+
+        const itemName = item.name || '-';
+        const quantity = item.quantity?.toString() || '0';
+        const price = item.price || '0';
+        const itemTotal = item.total || '0';
+
+        pdf.setTextColor(60);
+        pdf.text(itemName, 16, y);
+        pdf.text(quantity, 100, y);
+        pdf.text(price, 130, y);
+        pdf.text(itemTotal, 160, y);
+
+        y += 7;
+      });
+
+      // Total Summary
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(28, 110, 77);
+      pdf.text(`Order Total: ${total}`, 150, y + 2);
+
+      y += 14;
+    });
+
+    // Footer
+    pdf.setFontSize(9);
+    pdf.setTextColor(150);
+    pdf.text('Generated by AgriSmart · www.agrismart.tn', 14, 290);
+
+    pdf.save('order_history.pdf');
+  };
+
+
   return (
     <div className={`min-h-screen w-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'} overflow-auto transition-colors duration-300`}>
       <main className="max-w-4xl mx-auto p-6">
         <div className="flex items-center justify-between mb-8">
           <h2 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Order History</h2>
+          <button
+            onClick={generatePDF}
+            className="flex items-center bg-green-600 text-white px-3 py-2 rounded hover:bg-green-500"
+          >
+            <FileText className="mr-2 h-5 w-5" />
+            Download PDF
+          </button>
+
         </div>
 
         {orders.length === 0 ? (
@@ -184,7 +294,11 @@ export default function OrderHistoryPage() {
                     <div className="flex items-center">
                       <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Order #{order.referenceId}</h3>
                       <span
-                        className={`ml-3 px-2 py-1 text-xs rounded-full text-white ${order.status === 'Delivered' ? 'bg-green-600' : 'bg-blue-600'}`}
+                        className={`ml-3 px-2 py-1 text-xs rounded-full ${order.status === 'Delivered'
+                          ? 'bg-green-600'
+                          : 'bg-blue-600'
+                          }`}
+
                       >
                         {order.status}
                       </span>
@@ -195,6 +309,7 @@ export default function OrderHistoryPage() {
                     </div>
                   </div>
                   <div className="flex items-center">
+
                     <span className={`text-xl font-semibold ${darkMode ? 'text-green-400' : 'text-green-600'} mr-4`}>
                       {order.total}
                     </span>
@@ -250,7 +365,7 @@ export default function OrderHistoryPage() {
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         <div className="mt-8 flex justify-center">
           <div className="flex space-x-1">
             <button

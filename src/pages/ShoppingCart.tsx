@@ -18,54 +18,57 @@ const ShoppingCart: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { darkMode } = useTheme();
   const dispatch = useDispatch();
+  const [customerId, setCustomerId] = useState<string | null>(null);
 
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
-  
-  
 
 
-    const getUserIdFromToken = (token: string): string | null => {
+
+
+  const getUserIdFromToken = (token: string): string | null => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const { id } = JSON.parse(jsonPayload);
+      return id;
+    } catch (error) {
+      console.error('Erreur lors du décodage du token:', error);
+      return null;
+    }
+  };
+
+
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
       try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const { id } = JSON.parse(jsonPayload);
-        return id;
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token ) {
+          
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+
+        const userId = getUserIdFromToken(token);
+        console.log("aaaaaaaaaaaaaaaaaaaa", userId);
+        if (!userId) {
+
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+        setCustomerId(userId);
       } catch (error) {
-        console.error('Erreur lors du décodage du token:', error);
-        return null;
-      }
-    };
-  
-      
-
-    useEffect(() => {
-      const checkAuthAndFetchData = async () => {
-        try {
-          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-          if (!token || !isAuthenticated) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-  
-          const userId = getUserIdFromToken(token);
-          if (!userId) {
-
-            setLoading(false);
-            navigate('/login');
-            return;
-          }
-        }catch (error) {
         console.error('Error checking authentication:', error);
-        setLoading(false);
-        navigate('/login');
+        // setLoading(false);
+        // navigate('/login');
       }
     };
 
@@ -119,7 +122,7 @@ const ShoppingCart: React.FC = () => {
 
     const orderPayload: Order = {
       totalAmount: calculateTotal(),
-      customerId: "67ce51510af75f3304655540",
+      customerId: customerId?.toString() || "",
       orderStatus: "pending",
       orderItems: cart.map((item: { id: string; quantity: number }) => ({
         productId: item.id,
