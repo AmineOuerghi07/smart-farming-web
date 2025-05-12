@@ -1,7 +1,7 @@
 import { useState, useEffect, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { UserService } from "../services/userService";
-import { CircleUser, Loader2, Camera, Save, Sun, Moon } from "lucide-react";
+import { CircleUser, Loader2, Camera, Save, Mail, Phone, MapPin, User } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -167,135 +167,180 @@ const EditProfile = () => {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} py-12 flex items-center justify-center transition-colors duration-300`}>
-      <div className="max-w-2xl w-full px-4">
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl rounded-2xl overflow-hidden transition-colors duration-300`}>
-          {/* Header with button and title */}
-          <div className="relative h-28 bg-gradient-to-r from-green-600 to-green-500">
-            <div className="absolute top-0 left-0 right-0 p-4 flex justify-center items-center">
-              <h1 className="text-xl font-semibold text-white">Edit Profile</h1>
-            </div>
-            
-            <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-32 h-32 rounded-full border-4 border-gray-800 overflow-hidden shadow-lg bg-gray-700">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-                id="profile-image"
-              />
+    <div className={`min-h-screen w-full ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} flex items-center justify-center p-4`}>
+      <div className="w-full max-w-md mx-auto">
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md overflow-hidden`}>
+          
+          {/* Clean header with title */}
+          <div className="pt-6 pb-2 text-center">
+            <h1 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              Modifier votre profil
+            </h1>
+          </div>
+
+          {/* Profile picture section */}
+          <div className="flex justify-center mt-4 mb-6">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-green-500 bg-white">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="profile-image"
+                />
+                <label
+                  htmlFor="profile-image"
+                  className="cursor-pointer block w-full h-full"
+                >
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Profile preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <User className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+                </label>
+              </div>
               <label
                 htmlFor="profile-image"
-                className="cursor-pointer block w-full h-full"
+                className="absolute bottom-0 right-0 bg-green-500 p-1.5 rounded-full cursor-pointer shadow-md"
               >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Profile preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <CircleUser className="w-16 h-16 text-gray-400" />
-                  </div>
-                )}
-                <div className="absolute bottom-0 right-0 bg-green-600 p-2 rounded-full shadow-lg">
-                  <Camera className="w-4 h-4 text-white" />
-                </div>
+                <Camera className="w-3.5 h-3.5 text-white" />
               </label>
             </div>
           </div>
 
-          {/* Form content centered with more top padding for larger image */}
-          <div className="pt-20 px-8 pb-8">
+          {/* Form content */}
+          <div className="px-6 pb-6">
             {/* Error message */}
             {error && (
-              <div className="mb-6 bg-red-500/10 border-l-4 border-red-500 p-4 rounded-r-md">
-                <p className="text-sm text-red-500">{error}</p>
+              <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-3 rounded text-red-600 text-sm">
+                {error}
               </div>
             )}
-            
+
             {fetchLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-                <span className={`ml-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading profile data...</span>
+              <div className="py-10 flex justify-center">
+                <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Name field */}
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                    Full Name
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
+                    Nom complet
                   </label>
-                  <input
-                    type="text"
-                    name="fullname"
-                    value={formData.fullname}
-                    onChange={handleInputChange}
-                    className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      name="phonenumber"
-                      value={formData.phonenumber}
-                      onChange={handleInputChange}
-                      className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                      Address
-                    </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className={`h-5 w-5 ${darkMode ? 'text-green-500' : 'text-green-600'}`} />
+                    </div>
                     <input
                       type="text"
-                      name="address"
-                      value={formData.address}
+                      name="fullname"
+                      value={formData.fullname}
                       onChange={handleInputChange}
-                      className={`w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'} border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors`}
+                      className={`w-full pl-10 p-2.5 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-800'
+                      } border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none`}
                       required
                     />
                   </div>
                 </div>
 
-                <div className="pt-6 flex justify-center">
+                {/* Email field */}
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
+                    Adresse e-mail
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className={`h-5 w-5 ${darkMode ? 'text-green-500' : 'text-green-600'}`} />
+                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 p-2.5 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300 text-gray-800'
+                      } border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone & Address fields - Stack on mobile, side by side on tablet/desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
+                      Téléphone
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Phone className={`h-5 w-5 ${darkMode ? 'text-green-500' : 'text-green-600'}`} />
+                      </div>
+                      <input
+                        type="tel"
+                        name="phonenumber"
+                        value={formData.phonenumber}
+                        onChange={handleInputChange}
+                        className={`w-full pl-10 p-2.5 ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-800'
+                        } border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none`}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
+                      Adresse
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPin className={`h-5 w-5 ${darkMode ? 'text-green-500' : 'text-green-600'}`} />
+                      </div>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className={`w-full pl-10 p-2.5 ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-800'
+                        } border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none`}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <div className="pt-4">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium shadow-md"
+                    className="w-full p-2.5 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
                   >
                     {loading ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Saving Changes...
+                        Enregistrement...
                       </>
                     ) : (
-                      <>
-                        <Save className="w-5 h-5 mr-2" />
-                        Save Changes
-                      </>
+                      'Sauvegarder'
                     )}
                   </button>
                 </div>

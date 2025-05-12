@@ -148,12 +148,12 @@ const ShoppingCart: React.FC = () => {
   };
 
   return (
-    <div className={`flex w-screen min-h-screen ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} transition-colors duration-300`}>
-      <div className="flex-1 flex justify-center items-start py-10">
-        <div className="w-full max-w-4xl px-4">
+    <div className={`flex w-full min-h-screen ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} transition-colors duration-300`}>
+      <div className="flex-1 flex justify-center items-start py-6 sm:py-10 px-4">
+        <div className="w-full max-w-4xl">
           <div className={darkMode ? "text-white" : "text-gray-800"}>
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-4xl font-bold">Shopping Cart</h1>
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h1 className="text-2xl sm:text-4xl font-bold">Shopping Cart</h1>
             </div>
 
             {products.length === 0 ? (
@@ -162,7 +162,7 @@ const ShoppingCart: React.FC = () => {
               </p>
 
             ) : (
-              <div className="mt-8 space-y-6">
+              <div className="mt-4 sm:mt-8 space-y-4 sm:space-y-6">
                 {products.map((product) => (
                   <div
                     key={product.id}
@@ -215,10 +215,10 @@ const ShoppingCart: React.FC = () => {
                 ))}
 
                 {/* Total Section */}
-                <div className={`${darkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl p-6 shadow-md`}>
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-md`}>
                   <div className={`flex justify-between items-center border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} pb-4`}>
-                    <span className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Total</span>
-                    <span className={`text-2xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                    <span className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Total</span>
+                    <span className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                       {calculateTotal().toFixed(2)} DT
                     </span>
                   </div>

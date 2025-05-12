@@ -56,12 +56,12 @@ const SignUp: React.FC = () => {
   const labelClasses = `block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`;
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left side - Form */}
-      <div className={`w-1/2 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-12 flex items-center justify-center relative`}>
-        {/* Decorative image */}
+    <div className="flex flex-col md:flex-row min-h-screen">
+      {/* Left side - Form - Full width on mobile, half on desktop */}
+      <div className={`w-full md:w-1/2 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 md:p-12 flex items-center justify-center relative`}>
+        {/* Decorative image - Hidden on small screens */}
         {!darkMode && (
-          <div className="absolute bottom-0 left-0">
+          <div className="absolute bottom-0 left-0 hidden md:block">
             <img 
               src="/assets/green.jpg" 
               alt="Decorative leaves" 
@@ -70,13 +70,13 @@ const SignUp: React.FC = () => {
           </div>
         )}
 
-        <div className="relative z-10 mt-8">
-          <div className="flex items-center gap-2 mb-8">
+        <div className="relative z-10 w-full max-w-md mx-auto py-8">
+          <div className="flex items-center gap-2 mb-6">
             <img src="/assets/logo.jpg" className="h-8" alt="Logo" />
             <span className={`text-xl font-medium ${darkMode ? 'text-white' : 'text-[#0B3424]'}`}>Smart Farm</span>
           </div>
 
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-[#0B3424]'}`}>Create Account</h2>
             <p className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Join Smart Farm and start managing your farm intelligently
@@ -156,28 +156,31 @@ const SignUp: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label className={labelClasses}>Phone Number</label>
-              <input
-                type="tel"
-                name="phonenumber"
-                value={formData.phonenumber}
-                onChange={handleChange}
-                className={inputClasses}
-                required
-              />
-            </div>
+            {/* Phone and Address in a grid on larger screens */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClasses}>Phone Number</label>
+                <input
+                  type="tel"
+                  name="phonenumber"
+                  value={formData.phonenumber}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  required
+                />
+              </div>
 
-            <div>
-              <label className={labelClasses}>Address</label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className={inputClasses}
-                required
-              />
+              <div>
+                <label className={labelClasses}>Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  required
+                />
+              </div>
             </div>
 
             <button
@@ -214,8 +217,8 @@ const SignUp: React.FC = () => {
         </div>
       </div>
 
-      {/* Right side - Image */}
-      <div className={`w-1/2 ${darkMode ? 'bg-gray-900' : 'bg-[#0B3424]'} relative overflow-hidden flex`}>
+      {/* Right side - Image - Hidden on mobile, visible on desktop */}
+      <div className={`hidden md:flex w-full md:w-1/2 ${darkMode ? 'bg-gray-900' : 'bg-[#0B3424]'} relative overflow-hidden`}>
         <div className="absolute inset-0">
           <img 
             src="/assets/plant.jpg" 
