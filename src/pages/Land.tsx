@@ -83,13 +83,14 @@ export default function Land() {
     <div className={`w-full min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'} p-4 flex flex-col items-center transition-colors duration-300`}>
       <div className="w-full max-w-6xl">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Lands</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+          <h1 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Lands</h1>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md hover:bg-green-600 transition-all duration-300"
+            className="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-lg flex items-center justify-center sm:justify-start gap-2 shadow-md hover:bg-green-600 transition-all duration-300"
           >
-            <PlusCircle className="h-6 w-6" /> Add Land
+            <PlusCircle className="h-5 w-5" /> 
+            <span>Add Land</span>
           </button>
         </div>
 
@@ -133,12 +134,20 @@ export default function Land() {
             placeholder="Number of Regions"
             className={`w-full p-2 rounded border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} mb-4`}
           />
-          <button 
-            onClick={handleAddLand} 
-            className="bg-green-500 text-white px-4 py-2 rounded-lg w-full hover:bg-green-600"
-          >
-            Add Land
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <button 
+              onClick={() => setIsModalOpen(false)} 
+              className={`py-2 px-4 rounded-lg w-full sm:w-auto ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleAddLand} 
+              className="bg-green-500 text-white px-4 py-2 rounded-lg w-full sm:w-auto hover:bg-green-600"
+            >
+              Add Land
+            </button>
+          </div>
         </Modal>
       )}
     </div>
